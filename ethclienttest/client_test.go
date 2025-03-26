@@ -59,6 +59,13 @@ func GetEthClientAndAccounts(t *testing.T) ([]common.Address, *ethclient.Client)
 	return accounts, client
 }
 
+func WithAccount(t *testing.T, f func(common.Address, *ethclient.Client)) {
+	accounts, client := GetEthClientAndAccounts(t)
+	for _, addr := range accounts {
+		f(addr, client)
+	}
+}
+
 /////////////// Test func ///////////////
 
 func TestDailFailWithUnknownScheme(t *testing.T) {
@@ -141,6 +148,16 @@ func TestGetPendingNonce(t *testing.T) {
 		require.NoError(t, err)
 		t.Logf("  account [%d] %s: pending nonce-Tx counts so far %d", i, addr, nonce)
 	}
+}
+
+func TestGetPendingNonce2(t *testing.T) {
+	WithAccount(
+		t,
+		func(addr common.Address, client *ethclient.Client) {
+			nonce, err := client.PendingNonceAt(context.Background(), addr)
+			require.NoError(t, err)
+			t.Logf("  account %s: pending nonce-Tx counts so far %d", addr, nonce)
+		})
 }
 
 //func TestBlockHeightIncreasesAfterTx(t *testing.T) {
