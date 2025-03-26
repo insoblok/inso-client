@@ -75,15 +75,15 @@ func main() {
 		fmt.Printf("💰 Balance: %s wei\n", bal.String())
 	}
 
-	devnode.LoadTestAccounts()
-	devnode.FundTestAccounts(devAddr, rpcClient)
+	testAccount := devnode.LoadTestAccounts()
+	fundedAccounts := devnode.FundTestAccounts(devAddr, rpcClient, testAccount)
 
 	// ✅ ✅ ✅ START HTTP SERVER
 	go func() {
 		log.Println("🌐 Supporting HTTP server listening at http://localhost:" + serverPort + "...")
 		err := http.ListenAndServe(
 			":"+serverPort,
-			devnode.SetupRoutes(devAddr))
+			devnode.SetupRoutes(devAddr, fundedAccounts))
 		if err != nil {
 			log.Fatalf("❌ Failed to start HTTP server: %v", err)
 		}

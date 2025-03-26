@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func SetupRoutes(devAccount common.Address) *http.ServeMux {
+func SetupRoutes(devAccount common.Address, accounts *map[string]*TestAccount) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/dev-account", func(w http.ResponseWriter, r *http.Request) {

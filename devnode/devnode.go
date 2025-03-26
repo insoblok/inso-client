@@ -30,9 +30,8 @@ var rawAccounts = map[string]string{
 	"judy":    "0xdbda1821b80551c9e1c03fa0c27f14f85f3bdd8e991b52e3b0a38a42f4c1d2a3",
 }
 
-var testAccounts = make(map[string]*TestAccount)
-
-func LoadTestAccounts() {
+func LoadTestAccounts() *map[string]*TestAccount {
+	var testAccounts = make(map[string]*TestAccount)
 	for name, hexKey := range rawAccounts {
 		privKey, err := crypto.HexToECDSA(strings.TrimPrefix(hexKey, "0x"))
 		if err != nil {
@@ -50,12 +49,13 @@ func LoadTestAccounts() {
 	for name, acc := range testAccounts {
 		log.Printf("  %s => %s", name, acc.Address.Hex())
 	}
+	return &testAccounts
 }
 
-func FundTestAccounts(devAccount common.Address, rpcClient *rpc.Client) {
+func FundTestAccounts(devAccount common.Address, rpcClient *rpc.Client, testAccounts *map[string]*TestAccount) *map[string]*TestAccount {
 	ctx := context.Background()
 
-	for name, acc := range testAccounts {
+	for name, acc := range *testAccounts {
 		// Build a call to eth_sendTransaction with from, to, value (in hex)
 		var txHash string
 		err := rpcClient.CallContext(ctx, &txHash, "eth_sendTransaction", map[string]interface{}{
@@ -69,4 +69,5 @@ func FundTestAccounts(devAccount common.Address, rpcClient *rpc.Client) {
 
 		log.Printf("📤 Funded %s (%s) with 1 ETH (tx: %s)", name, acc.Address.Hex(), txHash)
 	}
+	return testAccounts
 }
