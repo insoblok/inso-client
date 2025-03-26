@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"time"
@@ -15,14 +17,14 @@ import (
 )
 
 func main() {
-	// 🎛️ CLI flag for port
 	var port string
+	var serverPort string
 	flag.StringVar(&port, "port", "8545", "HTTP RPC port for the dev node")
+	flag.StringVar(&serverPort, "serverPort", "8888", "HTTP RPC port for the supporting server")
 	flag.Parse()
 
-	var gethCmd = "/Users/iyadi/github/ethereum/go-ethereum/build/bin/geth" // leave this hardcoded for now
+	var gethCmd = "/Users/iyadi/github/ethereum/go-ethereum/build/bin/geth"
 
-	// 🚀 Start geth
 	cmd := exec.Command(gethCmd,
 		"--dev",
 		"--http",
@@ -43,7 +45,6 @@ func main() {
 		cmd.Process.Kill()
 	}()
 
-	// ⏳ Wait for readiness
 	var rpcClient *rpc.Client
 	for i := 0; i < 10; i++ {
 		time.Sleep(1 * time.Second)
@@ -61,7 +62,6 @@ func main() {
 	client := ethclient.NewClient(rpcClient)
 	defer client.Close()
 
-	// 🧙 Query dev account
 	var accounts []string
 	err = rpcClient.Call(&accounts, "eth_accounts")
 	if err != nil || len(accounts) == 0 {
@@ -70,11 +70,31 @@ func main() {
 	devAddr := common.HexToAddress(accounts[0])
 	fmt.Printf("✅ Dev account: %s\n", devAddr.Hex())
 
-	// 💰 Query balance
 	bal, err := client.BalanceAt(context.Background(), devAddr, nil)
 	if err == nil {
 		fmt.Printf("💰 Balance: %s wei\n", bal.String())
 	}
+
+	// ✅ ✅ ✅ START HTTP SERVER
+	go func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/dev-account", func(w http.ResponseWriter, r *http.Request) {
+			resp := struct {
+				Address string `json:"address"`
+			}{
+				Address: devAddr.Hex(),
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(resp)
+		})
+
+		log.Println("🌐 Supporting HTTP server listening at http://localhost:" + serverPort + "...")
+		err := http.ListenAndServe(":"+serverPort, mux)
+		if err != nil {
+			log.Fatalf("❌ Failed to start HTTP server: %v", err)
+		}
+	}()
+	// ✅ ✅ ✅ END HTTP SERVER
 
 	log.Printf("📡 Dev node ready at http://localhost:%s — Press Ctrl+C to exit", port)
 	select {}
