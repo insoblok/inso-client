@@ -12,8 +12,8 @@ import (
 )
 
 type TestAccount struct {
-	Name    string
 	Address common.Address
+	Name    string
 	PrivKey *ecdsa.PrivateKey
 }
 
