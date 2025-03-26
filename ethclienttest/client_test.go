@@ -2,8 +2,12 @@ package ethclienttest
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/stretchr/testify/require"
+	"math/big"
+	"strings"
 	"testing"
 )
 
@@ -24,20 +28,35 @@ func SetupRpcClient(t *testing.T) *rpc.Client {
 	return rpcClient
 }
 
-func FetchAccounts(t *testing.T) []string {
+func FetchAccounts(t *testing.T) []common.Address {
 	rpcClient := SetupRpcClient(t)
 	defer rpcClient.Close()
 
-	var accounts []string
-	err := rpcClient.Call(&accounts, "eth_accounts")
+	var raw []string
+	err := rpcClient.Call(&raw, "eth_accounts")
 	if err != nil {
 		t.Fatalf("Failed to fetch accounts: %v", err)
 	}
 
-	if len(accounts) == 0 {
+	if len(raw) == 0 {
 		t.Fatal("Expected at least one account from dev node, got zero")
 	}
-	return accounts
+
+	var addresses []common.Address
+	for _, addr := range raw {
+		addresses = append(addresses, common.HexToAddress(addr))
+	}
+	return addresses
+}
+
+func ToBigInt(j uint64) *big.Int {
+	return big.NewInt(int64(j))
+}
+
+func GetEthClientAndAccounts(t *testing.T) ([]common.Address, *ethclient.Client) {
+	accounts := FetchAccounts(t)
+	client := SetupEthClient(t)
+	return accounts, client
 }
 
 /////////////// Test func ///////////////
@@ -76,15 +95,52 @@ func TestGetAccountsFromNode(t *testing.T) {
 	}
 }
 
-func TestGetBalance(t *testing.T) {
-	accounts := FetchAccounts(t)
-	client := SetupEthClient(t)
+func TestGetCurrentBalance(t *testing.T) {
+	accounts, client := GetEthClientAndAccounts(t)
 	defer client.Close()
 	t.Logf("✅ Fetched %d account(s):", len(accounts))
 	for i, addr := range accounts {
-		client.BalanceAt(context.Background(), addr, nil)
+		balance, err := client.BalanceAt(context.Background(), addr, nil)
+		require.NoError(t, err)
+		t.Logf("  [%d] %s: %s", i, addr, balance)
 	}
+}
 
+func TestGetCurrentBalanceAtBlock(t *testing.T) {
+	accounts, client := GetEthClientAndAccounts(t)
+	defer client.Close()
+	t.Logf("✅ Fetched %d account(s):", len(accounts))
+	height, err := client.BlockNumber(context.Background())
+	require.NoError(t, err)
+	t.Logf("Current block height: %d", height)
+	for i, addr := range accounts {
+		t.Logf("account [%d] %s", i, addr)
+		for j := uint64(0); j < height; j++ {
+			balance, err := client.BalanceAt(context.Background(), addr, ToBigInt(j))
+			require.NoError(t, err)
+			t.Logf("%sblock %d: %s", strings.Repeat(" ", 8), j, balance)
+		}
+	}
+}
+
+func TestGetNonce(t *testing.T) {
+	accounts, client := GetEthClientAndAccounts(t)
+	defer client.Close()
+	for i, addr := range accounts {
+		nonce, err := client.NonceAt(context.Background(), addr, nil)
+		require.NoError(t, err)
+		t.Logf(" account [%d] %s: latest nonce-Tx counts so far %d", i, addr, nonce)
+	}
+}
+
+func TestGetPendingNonce(t *testing.T) {
+	accounts, client := GetEthClientAndAccounts(t)
+	defer client.Close()
+	for i, addr := range accounts {
+		nonce, err := client.PendingNonceAt(context.Background(), addr)
+		require.NoError(t, err)
+		t.Logf("  account [%d] %s: pending nonce-Tx counts so far %d", i, addr, nonce)
+	}
 }
 
 //func TestBlockHeightIncreasesAfterTx(t *testing.T) {
