@@ -26,7 +26,7 @@ func main() {
 	cmd := exec.Command(gethCmd,
 		"--dev",
 		"--http",
-		"--http.api", "eth,net,web3,personal",
+		"--http.api", "eth,net,web3,txpool,miner,admin,debug",
 		"--http.addr", "127.0.0.1",
 		"--http.port", port,
 	)
