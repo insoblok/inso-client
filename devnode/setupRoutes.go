@@ -14,7 +14,7 @@ type accountResponse struct {
 	PrivateKey string `json:"privateKey"`
 }
 
-func SetupRoutes(devAccount common.Address, accounts *map[string]*TestAccount) *http.ServeMux {
+func SetupRoutes(devAccount common.Address, rpcPort string, accounts *map[string]*TestAccount) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/dev-account", func(w http.ResponseWriter, r *http.Request) {
@@ -40,6 +40,22 @@ func SetupRoutes(devAccount common.Address, accounts *map[string]*TestAccount) *
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(list)
+	})
+
+	// 🆕 /info endpoint
+	mux.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
+		resp := struct {
+			RPCURL        string `json:"rpcUrl"`
+			RPCPort       string `json:"rpcPort"`
+			AccountsCount int    `json:"accountsCount"`
+		}{
+			RPCURL:        "http://localhost:" + rpcPort,
+			RPCPort:       rpcPort,
+			AccountsCount: len(*accounts),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
 	})
 
 	return mux

@@ -83,7 +83,7 @@ func main() {
 		log.Println("🌐 Supporting HTTP server listening at http://localhost:" + serverPort + "...")
 		err := http.ListenAndServe(
 			":"+serverPort,
-			devnode.SetupRoutes(devAddr, fundedAccounts))
+			devnode.SetupRoutes(devAddr, port, fundedAccounts))
 		if err != nil {
 			log.Fatalf("❌ Failed to start HTTP server: %v", err)
 		}
