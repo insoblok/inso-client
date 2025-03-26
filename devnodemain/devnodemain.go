@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"eth-toy-client/devnode"
 	"flag"
 	"fmt"
@@ -81,19 +80,10 @@ func main() {
 
 	// ✅ ✅ ✅ START HTTP SERVER
 	go func() {
-		mux := http.NewServeMux()
-		mux.HandleFunc("/dev-account", func(w http.ResponseWriter, r *http.Request) {
-			resp := struct {
-				Address string `json:"address"`
-			}{
-				Address: devAddr.Hex(),
-			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(resp)
-		})
-
 		log.Println("🌐 Supporting HTTP server listening at http://localhost:" + serverPort + "...")
-		err := http.ListenAndServe(":"+serverPort, mux)
+		err := http.ListenAndServe(
+			":"+serverPort,
+			devnode.SetupRoutes(devAddr))
 		if err != nil {
 			log.Fatalf("❌ Failed to start HTTP server: %v", err)
 		}

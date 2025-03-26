@@ -12,9 +12,11 @@ import (
 	"testing"
 )
 
+var targetHost = "http://localhost:8565"
+
 // For the purpose of this test, it will be ok just to return the client
 func SetupEthClient(t *testing.T) *ethclient.Client {
-	client, err := ethclient.Dial("http://localhost:8545")
+	client, err := ethclient.Dial(targetHost)
 	if err != nil {
 		t.Fatalf("Failed to connect: %v", err)
 	}
@@ -22,7 +24,7 @@ func SetupEthClient(t *testing.T) *ethclient.Client {
 }
 
 func SetupRpcClient(t *testing.T) *rpc.Client {
-	rpcClient, err := rpc.Dial("http://localhost:8545")
+	rpcClient, err := rpc.Dial(targetHost)
 	if err != nil {
 		t.Fatalf("Failed to connect: %v", err)
 	}
