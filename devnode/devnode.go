@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -14,10 +15,14 @@ import (
 )
 
 func main() {
-	// 1. Start geth as a child process
-	var port = "8565"
-	var gethCmd = "/Users/iyadi/github/ethereum/go-ethereum/build/bin/geth"
+	// 🎛️ CLI flag for port
+	var port string
+	flag.StringVar(&port, "port", "8545", "HTTP RPC port for the dev node")
+	flag.Parse()
 
+	var gethCmd = "/Users/iyadi/github/ethereum/go-ethereum/build/bin/geth" // leave this hardcoded for now
+
+	// 🚀 Start geth
 	cmd := exec.Command(gethCmd,
 		"--dev",
 		"--http",
@@ -28,18 +33,17 @@ func main() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	log.Println("🚀 Starting Geth dev node...")
+	log.Printf("🚀 Starting Geth dev node on port %s...", port)
 	err := cmd.Start()
 	if err != nil {
 		log.Fatalf("❌ Failed to start geth: %v", err)
 	}
-
 	defer func() {
 		log.Println("🛑 Shutting down Geth...")
 		cmd.Process.Kill()
 	}()
 
-	// 2. Wait for geth to be ready (simple poll)
+	// ⏳ Wait for readiness
 	var rpcClient *rpc.Client
 	for i := 0; i < 10; i++ {
 		time.Sleep(1 * time.Second)
@@ -57,7 +61,7 @@ func main() {
 	client := ethclient.NewClient(rpcClient)
 	defer client.Close()
 
-	// 3. Query dev account
+	// 🧙 Query dev account
 	var accounts []string
 	err = rpcClient.Call(&accounts, "eth_accounts")
 	if err != nil || len(accounts) == 0 {
@@ -66,12 +70,12 @@ func main() {
 	devAddr := common.HexToAddress(accounts[0])
 	fmt.Printf("✅ Dev account: %s\n", devAddr.Hex())
 
-	// 4. (Optional) Get balance
+	// 💰 Query balance
 	bal, err := client.BalanceAt(context.Background(), devAddr, nil)
 	if err == nil {
 		fmt.Printf("💰 Balance: %s wei\n", bal.String())
 	}
 
-	log.Println("📡 Dev node is ready. Press Ctrl+C to exit.")
-	select {} // Block forever
+	log.Printf("📡 Dev node ready at http://localhost:%s — Press Ctrl+C to exit", port)
+	select {}
 }
