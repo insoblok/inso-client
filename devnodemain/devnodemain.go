@@ -77,7 +77,7 @@ func main() {
 	}
 
 	devnode.LoadTestAccounts()
-	devnode.FundTestAccounts(devAddr, client)
+	devnode.FundTestAccounts(devAddr, rpcClient)
 
 	// ✅ ✅ ✅ START HTTP SERVER
 	go func() {
