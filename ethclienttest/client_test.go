@@ -59,10 +59,12 @@ func GetEthClientAndAccounts(t *testing.T) ([]common.Address, *ethclient.Client)
 	return accounts, client
 }
 
-func WithAccount(t *testing.T, f func(common.Address, *ethclient.Client)) {
+func WithAccount(t *testing.T, f func(t *testing.T, addr common.Address, client *ethclient.Client)) {
+	t.Helper()
 	accounts, client := GetEthClientAndAccounts(t)
+	defer client.Close()
 	for _, addr := range accounts {
-		f(addr, client)
+		f(t, addr, client)
 	}
 }
 
@@ -131,33 +133,19 @@ func TestGetCurrentBalanceAtBlock(t *testing.T) {
 }
 
 func TestGetNonce(t *testing.T) {
-	accounts, client := GetEthClientAndAccounts(t)
-	defer client.Close()
-	for i, addr := range accounts {
+	WithAccount(t, func(t *testing.T, addr common.Address, client *ethclient.Client) {
 		nonce, err := client.NonceAt(context.Background(), addr, nil)
 		require.NoError(t, err)
-		t.Logf(" account [%d] %s: latest nonce-Tx counts so far %d", i, addr, nonce)
-	}
+		t.Logf("  account %s: pending nonce-Tx counts so far %d", addr, nonce)
+	})
 }
 
 func TestGetPendingNonce(t *testing.T) {
-	accounts, client := GetEthClientAndAccounts(t)
-	defer client.Close()
-	for i, addr := range accounts {
+	WithAccount(t, func(t *testing.T, addr common.Address, client *ethclient.Client) {
 		nonce, err := client.PendingNonceAt(context.Background(), addr)
 		require.NoError(t, err)
-		t.Logf("  account [%d] %s: pending nonce-Tx counts so far %d", i, addr, nonce)
-	}
-}
-
-func TestGetPendingNonce2(t *testing.T) {
-	WithAccount(
-		t,
-		func(addr common.Address, client *ethclient.Client) {
-			nonce, err := client.PendingNonceAt(context.Background(), addr)
-			require.NoError(t, err)
-			t.Logf("  account %s: pending nonce-Tx counts so far %d", addr, nonce)
-		})
+		t.Logf("  account %s: pending nonce-Tx counts so far %d", addr, nonce)
+	})
 }
 
 //func TestBlockHeightIncreasesAfterTx(t *testing.T) {
