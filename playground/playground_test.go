@@ -225,3 +225,44 @@ func TestSignedTxAffectsBalances(t *testing.T) {
 	require.True(t, bobAfter.Cmp(bobBefore) > 0, "Bob should have received ETH")
 	require.True(t, aliceAfter.Cmp(aliceBefore) < 0, "Alice should have less due to tx + gas")
 }
+
+func TestQueryTxByHash(t *testing.T) {
+	client, alice, bob, _ := MustGet(t, GetUrls())
+	defer client.Close()
+
+	// Get balances / nonce / chain ID
+	nonce, _ := client.PendingNonceAt(context.Background(), alice.CommonAddress)
+	chainID, _ := client.ChainID(context.Background())
+
+	// Create and sign tx
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   chainID,
+		Nonce:     nonce,
+		GasFeeCap: big.NewInt(1e9),
+		GasTipCap: big.NewInt(1),
+		Gas:       21_000,
+		To:        &bob.CommonAddress,
+		Value:     big.NewInt(1e16), // 0.01 ETH
+	})
+
+	privKey, _ := crypto.HexToECDSA(strings.TrimPrefix(alice.PrivateKey, "0x"))
+	signedTx, _ := types.SignTx(tx, types.NewLondonSigner(chainID), privKey)
+
+	// Send tx
+	err := client.SendTransaction(context.Background(), signedTx)
+	require.NoError(t, err)
+	t.Logf("🔐 Sent tx: %s", signedTx.Hash())
+
+	// Wait a bit for mining
+	time.Sleep(1 * time.Second)
+
+	// Query it back
+	txBack, isPending, err := client.TransactionByHash(context.Background(), signedTx.Hash())
+	require.NoError(t, err)
+	require.False(t, isPending, "Transaction is still pending")
+
+	// Assert target & value
+	require.Equal(t, bob.CommonAddress, *txBack.To(), "To address mismatch")
+	require.Equal(t, big.NewInt(1e16), txBack.Value(), "Transferred value mismatch")
+	t.Log("✅ Tx confirmed in block and matches expected recipient + value")
+}
