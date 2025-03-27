@@ -19,6 +19,12 @@ type Urls struct {
 	AccountsURL string
 }
 
+type ClientTestAccount struct {
+	Name       string `json:"name"`
+	Address    string `json:"address"`
+	PrivateKey string `json:"privateKey"`
+}
+
 func GetUrls() Urls {
 	base := "http://localhost:8575"
 	return Urls{
@@ -28,8 +34,8 @@ func GetUrls() Urls {
 	}
 }
 
-func TestPlaygroundInfo(t *testing.T) {
-	resp, err := http.Get(GetUrls().InfoURL)
+func GetInfoResponse(t *testing.T, urls Urls) InfoResponse {
+	resp, err := http.Get(urls.InfoURL)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -39,28 +45,34 @@ func TestPlaygroundInfo(t *testing.T) {
 	var info InfoResponse
 	err = json.Unmarshal(body, &info)
 	require.NoError(t, err)
+	return info
+}
+
+func GetAccounts(t *testing.T, urls Urls) []ClientTestAccount {
+	resp, err := http.Get(urls.AccountsURL)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var accounts []ClientTestAccount
+
+	err = json.NewDecoder(resp.Body).Decode(&accounts)
+	require.NoError(t, err)
+	return accounts
+}
+
+func TestPlaygroundInfo(t *testing.T) {
+	info := GetInfoResponse(t, GetUrls())
 
 	t.Logf("ℹ️  Test server info:")
 	t.Logf("   🔗 RPC URL: %s", info.RPCURL)
 	t.Logf("   👤 Accounts Count: %d", info.AccountsCount)
-
 	require.NotEmpty(t, info.RPCURL)
 	require.Greater(t, info.AccountsCount, 0)
 }
 
 func TestPlaygroundAccounts(t *testing.T) {
-	resp, err := http.Get(GetUrls().AccountsURL)
-	require.NoError(t, err)
-	defer resp.Body.Close()
 
-	var accounts []struct {
-		Name       string `json:"name"`
-		Address    string `json:"address"`
-		PrivateKey string `json:"privateKey"`
-	}
-	err = json.NewDecoder(resp.Body).Decode(&accounts)
-	require.NoError(t, err)
-
+	accounts := GetAccounts(t, GetUrls())
 	require.Len(t, accounts, 10, "Expected 10 test accounts")
 
 	foundAlice := false
