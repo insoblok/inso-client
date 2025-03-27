@@ -2,11 +2,10 @@ package playground
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 type InfoResponse struct {
@@ -14,13 +13,23 @@ type InfoResponse struct {
 	AccountsCount int    `json:"accountsCount"`
 }
 
-var serverURL = "http://localhost:8575"
-var infoURL = serverURL + "/info"
-var accountsURL = serverURL + "/accounts"
+type Urls struct {
+	ServerURL   string
+	InfoURL     string
+	AccountsURL string
+}
+
+func GetUrls() Urls {
+	base := "http://localhost:8575"
+	return Urls{
+		ServerURL:   base,
+		InfoURL:     base + "/info",
+		AccountsURL: base + "/accounts",
+	}
+}
 
 func TestPlaygroundInfo(t *testing.T) {
-
-	resp, err := http.Get(infoURL)
+	resp, err := http.Get(GetUrls().InfoURL)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -40,7 +49,7 @@ func TestPlaygroundInfo(t *testing.T) {
 }
 
 func TestPlaygroundAccounts(t *testing.T) {
-	resp, err := http.Get(accountsURL)
+	resp, err := http.Get(GetUrls().AccountsURL)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
