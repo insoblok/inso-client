@@ -1,4 +1,4 @@
-package ethclienttest
+package playground
 
 import (
 	"encoding/json"
@@ -14,10 +14,13 @@ type InfoResponse struct {
 	AccountsCount int    `json:"accountsCount"`
 }
 
-func TestPlaygroundInfo(t *testing.T) {
-	serverURL := "http://localhost:8575" // Hardcoded for now
+var serverURL = "http://localhost:8575"
+var infoURL = serverURL + "/info"
+var accountsURL = serverURL + "/accounts"
 
-	resp, err := http.Get(serverURL + "/info")
+func TestPlaygroundInfo(t *testing.T) {
+
+	resp, err := http.Get(infoURL)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -37,7 +40,7 @@ func TestPlaygroundInfo(t *testing.T) {
 }
 
 func TestPlaygroundAccounts(t *testing.T) {
-	resp, err := http.Get("http://localhost:8575/accounts")
+	resp, err := http.Get(accountsURL)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
