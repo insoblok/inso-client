@@ -6,7 +6,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
 	"log"
+	"os"
+	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -73,4 +76,56 @@ func FundTestAccounts(
 		log.Printf("📤 Funded %s (%s) with 1 ETH (tx: %s)", name, acc.Address.Hex(), txHash)
 	}
 	return testAccounts
+}
+
+func PingDevNode(rpcClient *rpc.Client) bool {
+	var result string
+	err := rpcClient.Call(&result, "web3_clientVersion")
+	return err == nil
+}
+
+// StartDevNode launches the Geth dev node and returns:
+// - rpcClient: the connected RPC client
+// - ready: a channel that is closed when the node is ready
+// - err: any immediate startup error
+func StartDevNode(port string) (*rpc.Client, <-chan struct{}, error) {
+	cmd := exec.Command(
+		"/Users/iyadi/github/ethereum/go-ethereum/build/bin/geth", //refactor later and make it part of some config struct
+		"--dev",
+		"--http",
+		"--http.api", "eth,net,web3,personal",
+		"--http.addr", "127.0.0.1",
+		"--http.port", port,
+	)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	log.Printf("🚀 Starting Geth dev node on port %s...", port)
+	if err := cmd.Start(); err != nil {
+		return nil, nil, err
+	}
+
+	// Caller can decide to clean this up
+	go func() { _ = cmd.Wait() }()
+
+	// Connect once and keep trying until ping works
+	client, err := rpc.Dial("http://localhost:" + port)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ready := make(chan struct{})
+	go func() {
+		for {
+			if PingDevNode(client) {
+				log.Printf("✅ Geth dev node is ready on port %s", port)
+				close(ready)
+				return
+			}
+			log.Println("⏳ Waiting for Geth to be ready...")
+			time.Sleep(1 * time.Second)
+		}
+	}()
+
+	return client, ready, nil
 }

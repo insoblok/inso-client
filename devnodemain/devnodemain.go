@@ -5,15 +5,11 @@ import (
 	"eth-toy-client/devnode"
 	"flag"
 	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"os/exec"
-	"time"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
+	"log"
+	"net/http"
+	"time"
 )
 
 func main() {
@@ -23,41 +19,19 @@ func main() {
 	flag.StringVar(&serverPort, "serverPort", "8888", "HTTP RPC port for the supporting server")
 	flag.Parse()
 
-	var gethCmd = "/Users/iyadi/github/ethereum/go-ethereum/build/bin/geth"
+	//var gethCmd = "/Users/iyadi/github/ethereum/go-ethereum/build/bin/geth"
 
-	cmd := exec.Command(gethCmd,
-		"--dev",
-		"--http",
-		"--http.api", "eth,net,web3,txpool,miner,admin,debug",
-		"--http.addr", "127.0.0.1",
-		"--http.port", port,
-	)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	log.Printf("🚀 Starting Geth dev node on port %s...", port)
-	err := cmd.Start()
+	rpcClient, ready, err := devnode.StartDevNode(port)
 	if err != nil {
-		log.Fatalf("❌ Failed to start geth: %v", err)
+		log.Fatalf("Error starting dev node: %v", err)
 	}
-	defer func() {
-		log.Println("🛑 Shutting down Geth...")
-		cmd.Process.Kill()
-	}()
 
-	var rpcClient *rpc.Client
-	for i := 0; i < 10; i++ {
-		time.Sleep(1 * time.Second)
-		rpcClient, err = rpc.Dial("http://localhost:" + port)
-		if err == nil {
-			break
-		}
-		log.Println("⏳ Waiting for Geth to be ready...")
+	select {
+	case <-ready:
+		log.Println("🚦 Node is ready. Proceed.")
+	case <-time.After(5 * time.Second):
+		log.Fatal("🕒 Timeout waiting for dev node to start.")
 	}
-	if rpcClient == nil {
-		log.Fatal("❌ Geth did not start in time")
-	}
-	defer rpcClient.Close()
 
 	client := ethclient.NewClient(rpcClient)
 	defer client.Close()
