@@ -140,3 +140,52 @@ func TestSignedTxFromAliceToBob(t *testing.T) {
 	require.NoError(t, err)
 	t.Logf("📤 Sent 0.01 ETH from alice to bob — tx: %s", signedTx.Hash().Hex())
 }
+
+func TestSendSignedTxFromAliceToBob(t *testing.T) {
+	accounts := GetAccounts(t, GetUrls())
+	require.Len(t, accounts, 10, "Expected 10 test accounts")
+
+	alice, ok := accounts["alice"]
+	require.True(t, ok, "Alice account is not found")
+	bob, ok := accounts["bob"]
+	require.True(t, ok, "Bob account is not found")
+
+	resp := GetInfoResponse(t, GetUrls())
+
+	client, err := ethclient.Dial(resp.RPCURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	ctx := context.Background()
+	chainID, err := client.ChainID(ctx)
+	require.NoError(t, err)
+	aliceAddr := common.HexToAddress(alice.Address)
+	nonce, err := client.PendingNonceAt(ctx, aliceAddr)
+	require.NoError(t, err)
+	bobAddr := common.HexToAddress(bob.Address)
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   chainID,
+		Nonce:     nonce,
+		GasFeeCap: big.NewInt(1e9), // Max fee
+		GasTipCap: big.NewInt(1),   // Priority tip
+		Gas:       21_000,
+		To:        &bobAddr,
+		Value:     big.NewInt(1e16), // 0.01 ETH
+	})
+	signer := types.NewLondonSigner(chainID)
+	privKey, err := crypto.HexToECDSA(strings.TrimPrefix(alice.PrivateKey, "0x"))
+	if err != nil {
+		log.Fatalf("❌ Invalid private key for %s: %v", alice.Name, err)
+	}
+
+	signedTx, err := types.SignTx(tx, signer, privKey)
+	require.NoError(t, err)
+
+	err = client.SendTransaction(ctx, signedTx)
+	require.NoError(t, err)
+
+	t.Logf("📤 Sent 0.01 ETH from alice to bob — tx: %s", signedTx.Hash().Hex())
+}
