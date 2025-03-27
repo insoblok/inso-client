@@ -19,9 +19,11 @@ func main() {
 	flag.StringVar(&serverPort, "serverPort", "8888", "HTTP RPC port for the supporting server")
 	flag.Parse()
 
-	//var gethCmd = "/Users/iyadi/github/ethereum/go-ethereum/build/bin/geth"
-
-	rpcClient, ready, err := devnode.StartDevNode(port)
+	devNodeConfig := devnode.DevNodeConfig{
+		RPCPort: port,
+		GethCmd: "/Users/iyadi/github/ethereum/go-ethereum/build/bin/geth",
+	}
+	rpcClient, ready, err := devnode.StartDevNode(devNodeConfig)
 	if err != nil {
 		log.Fatalf("Error starting dev node: %v", err)
 	}
