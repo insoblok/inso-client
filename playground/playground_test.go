@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 type InfoResponse struct {
@@ -73,6 +74,24 @@ func GetAccounts(t *testing.T, urls Urls) map[string]ClientTestAccount {
 	return accountsMap
 }
 
+func MustGet(t *testing.T, urls Urls) (*ethclient.Client, ClientTestAccount, ClientTestAccount, map[string]ClientTestAccount) {
+	accounts := GetAccounts(t, urls)
+	require.Len(t, accounts, 10, "Expected 10 test accounts")
+
+	alice, ok := accounts["alice"]
+	require.True(t, ok, "Alice account is not found")
+	bob, ok := accounts["bob"]
+	require.True(t, ok, "Bob account is not found")
+	resp := GetInfoResponse(t, urls)
+	client, err := ethclient.Dial(resp.RPCURL)
+	require.NoError(t, err)
+
+	return client, alice, bob, accounts
+
+}
+
+//////////////////////////////////////////////////////////////////
+
 func TestPlaygroundInfo(t *testing.T) {
 	info := GetInfoResponse(t, GetUrls())
 
@@ -97,20 +116,7 @@ func TestPlaygroundAccounts(t *testing.T) {
 }
 
 func TestSignedTxFromAliceToBob(t *testing.T) {
-	accounts := GetAccounts(t, GetUrls())
-	require.Len(t, accounts, 10, "Expected 10 test accounts")
-
-	alice, ok := accounts["alice"]
-	require.True(t, ok, "Alice account is not found")
-	bob, ok := accounts["bob"]
-	require.True(t, ok, "Bob account is not found")
-
-	resp := GetInfoResponse(t, GetUrls())
-
-	client, err := ethclient.Dial(resp.RPCURL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	client, alice, bob, _ := MustGet(t, GetUrls())
 	defer client.Close()
 
 	ctx := context.Background()
@@ -142,20 +148,7 @@ func TestSignedTxFromAliceToBob(t *testing.T) {
 }
 
 func TestSendSignedTxFromAliceToBob(t *testing.T) {
-	accounts := GetAccounts(t, GetUrls())
-	require.Len(t, accounts, 10, "Expected 10 test accounts")
-
-	alice, ok := accounts["alice"]
-	require.True(t, ok, "Alice account is not found")
-	bob, ok := accounts["bob"]
-	require.True(t, ok, "Bob account is not found")
-
-	resp := GetInfoResponse(t, GetUrls())
-
-	client, err := ethclient.Dial(resp.RPCURL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	client, alice, bob, _ := MustGet(t, GetUrls())
 	defer client.Close()
 
 	ctx := context.Background()
@@ -188,4 +181,51 @@ func TestSendSignedTxFromAliceToBob(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("📤 Sent 0.01 ETH from alice to bob — tx: %s", signedTx.Hash().Hex())
+}
+
+func TestSignedTxAffectsBalances(t *testing.T) {
+	client, alice, bob, _ := MustGet(t, GetUrls())
+	defer client.Close()
+
+	// 💰 Balance before
+	aliceAddress := common.HexToAddress(alice.Address)
+	aliceBefore, _ := client.BalanceAt(context.Background(), aliceAddress, nil)
+	bobAddress := common.HexToAddress(bob.Address)
+	bobBefore, _ := client.BalanceAt(context.Background(), bobAddress, nil)
+
+	// 🧾 Nonce & Chain ID
+	nonce, _ := client.PendingNonceAt(context.Background(), aliceAddress)
+	chainID, _ := client.ChainID(context.Background())
+
+	// 💸 Build tx
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   chainID,
+		Nonce:     nonce,
+		GasFeeCap: big.NewInt(1e9),
+		GasTipCap: big.NewInt(1),
+		Gas:       21000,
+		To:        &bobAddress,
+		Value:     big.NewInt(1e16), // 0.01 ETH
+	})
+
+	privKey, err := crypto.HexToECDSA(strings.TrimPrefix(alice.PrivateKey, "0x"))
+	signedTx, _ := types.SignTx(tx, types.NewLondonSigner(chainID), privKey)
+
+	// 📤 Send
+	err = client.SendTransaction(context.Background(), signedTx)
+	require.NoError(t, err)
+	t.Logf("Sent tx: %s", signedTx.Hash())
+
+	// 🕰️ Wait for mining
+	time.Sleep(1 * time.Second)
+
+	// 💰 After
+	aliceAfter, _ := client.BalanceAt(context.Background(), aliceAddress, nil)
+	bobAfter, _ := client.BalanceAt(context.Background(), bobAddress, nil)
+
+	t.Logf("Alice: %s -> %s", aliceBefore, aliceAfter)
+	t.Logf("Bob:   %s -> %s", bobBefore, bobAfter)
+
+	require.True(t, bobAfter.Cmp(bobBefore) > 0, "Bob should have received ETH")
+	require.True(t, aliceAfter.Cmp(aliceBefore) < 0, "Alice should have less due to tx + gas")
 }
