@@ -92,6 +92,31 @@ func MustGet(t *testing.T, urls Urls) (*ethclient.Client, ClientTestAccount, Cli
 
 }
 
+func AliceSignAndSendTx(t *testing.T) (*ethclient.Client, *types.Transaction, ClientTestAccount, ClientTestAccount, *big.Int, *big.Int) {
+	client, alice, bob, _ := MustGet(t, GetUrls())
+
+	aliceBefore, _ := client.BalanceAt(context.Background(), alice.CommonAddress, nil)
+	bobBefore, _ := client.BalanceAt(context.Background(), bob.CommonAddress, nil)
+	nonce, _ := client.PendingNonceAt(context.Background(), alice.CommonAddress)
+	chainID, _ := client.ChainID(context.Background())
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   chainID,
+		Nonce:     nonce,
+		GasTipCap: big.NewInt(1),
+		GasFeeCap: big.NewInt(1e9),
+		Gas:       21_000,
+		To:        &bob.CommonAddress,
+		Value:     big.NewInt(1e16), // 0.01 ETH
+	})
+
+	privKey, _ := crypto.HexToECDSA(strings.TrimPrefix(alice.PrivateKey, "0x"))
+	signedTx, _ := types.SignTx(tx, types.NewLondonSigner(chainID), privKey)
+	err := client.SendTransaction(context.Background(), signedTx)
+	require.NoError(t, err)
+	t.Logf("📤 Sent tx: %s", signedTx.Hash())
+	return client, signedTx, alice, bob, aliceBefore, bobBefore
+}
+
 //////////////////////////////////////////////////////////////////
 
 func TestPlaygroundInfo(t *testing.T) {
@@ -148,74 +173,16 @@ func TestSignedTxFromAliceToBob(t *testing.T) {
 }
 
 func TestSendSignedTxFromAliceToBob(t *testing.T) {
-	client, alice, bob, _ := MustGet(t, GetUrls())
+	client, _, _, _, _, _ := AliceSignAndSendTx(t)
 	defer client.Close()
-
-	ctx := context.Background()
-	chainID, err := client.ChainID(ctx)
-	require.NoError(t, err)
-	nonce, err := client.PendingNonceAt(ctx, alice.CommonAddress)
-	require.NoError(t, err)
-
-	tx := types.NewTx(&types.DynamicFeeTx{
-		ChainID:   chainID,
-		Nonce:     nonce,
-		GasFeeCap: big.NewInt(1e9), // Max fee
-		GasTipCap: big.NewInt(1),   // Priority tip
-		Gas:       21_000,
-		To:        &bob.CommonAddress,
-		Value:     big.NewInt(1e16), // 0.01 ETH
-	})
-	signer := types.NewLondonSigner(chainID)
-	privKey, err := crypto.HexToECDSA(strings.TrimPrefix(alice.PrivateKey, "0x"))
-	if err != nil {
-		log.Fatalf("❌ Invalid private key for %s: %v", alice.Name, err)
-	}
-
-	signedTx, err := types.SignTx(tx, signer, privKey)
-	require.NoError(t, err)
-
-	err = client.SendTransaction(ctx, signedTx)
-	require.NoError(t, err)
-
-	t.Logf("📤 Sent 0.01 ETH from alice to bob — tx: %s", signedTx.Hash().Hex())
 }
 
 func TestSignedTxAffectsBalances(t *testing.T) {
-	client, alice, bob, _ := MustGet(t, GetUrls())
+	client, _, alice, bob, aliceBefore, bobBefore := AliceSignAndSendTx(t)
 	defer client.Close()
 
-	// 💰 Balance before
-	aliceBefore, _ := client.BalanceAt(context.Background(), alice.CommonAddress, nil)
-	bobBefore, _ := client.BalanceAt(context.Background(), bob.CommonAddress, nil)
-
-	// 🧾 Nonce & Chain ID
-	nonce, _ := client.PendingNonceAt(context.Background(), alice.CommonAddress)
-	chainID, _ := client.ChainID(context.Background())
-
-	// 💸 Build tx
-	tx := types.NewTx(&types.DynamicFeeTx{
-		ChainID:   chainID,
-		Nonce:     nonce,
-		GasFeeCap: big.NewInt(1e9),
-		GasTipCap: big.NewInt(1),
-		Gas:       21000,
-		To:        &bob.CommonAddress,
-		Value:     big.NewInt(1e16), // 0.01 ETH
-	})
-
-	privKey, err := crypto.HexToECDSA(strings.TrimPrefix(alice.PrivateKey, "0x"))
-	signedTx, _ := types.SignTx(tx, types.NewLondonSigner(chainID), privKey)
-
-	// 📤 Send
-	err = client.SendTransaction(context.Background(), signedTx)
-	require.NoError(t, err)
-	t.Logf("Sent tx: %s", signedTx.Hash())
-
-	// 🕰️ Wait for mining
 	time.Sleep(1 * time.Second)
 
-	// 💰 After
 	aliceAfter, _ := client.BalanceAt(context.Background(), alice.CommonAddress, nil)
 	bobAfter, _ := client.BalanceAt(context.Background(), bob.CommonAddress, nil)
 
@@ -227,73 +194,24 @@ func TestSignedTxAffectsBalances(t *testing.T) {
 }
 
 func TestQueryTxByHash(t *testing.T) {
-	client, alice, bob, _ := MustGet(t, GetUrls())
+	client, signedTx, _, bob, _, _ := AliceSignAndSendTx(t)
 	defer client.Close()
 
-	// Get balances / nonce / chain ID
-	nonce, _ := client.PendingNonceAt(context.Background(), alice.CommonAddress)
-	chainID, _ := client.ChainID(context.Background())
-
-	// Create and sign tx
-	tx := types.NewTx(&types.DynamicFeeTx{
-		ChainID:   chainID,
-		Nonce:     nonce,
-		GasFeeCap: big.NewInt(1e9),
-		GasTipCap: big.NewInt(1),
-		Gas:       21_000,
-		To:        &bob.CommonAddress,
-		Value:     big.NewInt(1e16), // 0.01 ETH
-	})
-
-	privKey, _ := crypto.HexToECDSA(strings.TrimPrefix(alice.PrivateKey, "0x"))
-	signedTx, _ := types.SignTx(tx, types.NewLondonSigner(chainID), privKey)
-
-	// Send tx
-	err := client.SendTransaction(context.Background(), signedTx)
-	require.NoError(t, err)
-	t.Logf("🔐 Sent tx: %s", signedTx.Hash())
-
-	// Wait a bit for mining
 	time.Sleep(1 * time.Second)
 
-	// Query it back
 	txBack, isPending, err := client.TransactionByHash(context.Background(), signedTx.Hash())
 	require.NoError(t, err)
 	require.False(t, isPending, "Transaction is still pending")
 
-	// Assert target & value
 	require.Equal(t, bob.CommonAddress, *txBack.To(), "To address mismatch")
 	require.Equal(t, big.NewInt(1e16), txBack.Value(), "Transferred value mismatch")
 	t.Log("✅ Tx confirmed in block and matches expected recipient + value")
 }
 
 func TestTxReceiptShowsSuccess(t *testing.T) {
-	client, alice, bob, _ := MustGet(t, GetUrls())
+	client, signedTx, _, _, _, _ := AliceSignAndSendTx(t)
 	defer client.Close()
 
-	// Step 1: Build and sign tx
-	nonce, _ := client.PendingNonceAt(context.Background(), alice.CommonAddress)
-	chainID, _ := client.ChainID(context.Background())
-
-	tx := types.NewTx(&types.DynamicFeeTx{
-		ChainID:   chainID,
-		Nonce:     nonce,
-		GasTipCap: big.NewInt(1),
-		GasFeeCap: big.NewInt(1e9),
-		Gas:       21_000,
-		To:        &bob.CommonAddress,
-		Value:     big.NewInt(1e16), // 0.01 ETH
-	})
-
-	privKey, _ := crypto.HexToECDSA(strings.TrimPrefix(alice.PrivateKey, "0x"))
-	signedTx, _ := types.SignTx(tx, types.NewLondonSigner(chainID), privKey)
-
-	// Step 2: Send tx
-	err := client.SendTransaction(context.Background(), signedTx)
-	require.NoError(t, err)
-	t.Logf("📤 Sent tx: %s", signedTx.Hash())
-
-	// Step 3: Poll for receipt
 	var receipt *types.Receipt
 	for i := 0; i < 10; i++ {
 		time.Sleep(1 * time.Second)
@@ -306,6 +224,5 @@ func TestTxReceiptShowsSuccess(t *testing.T) {
 	require.NotNil(t, receipt, "Did not receive a receipt in time")
 	require.Equal(t, uint64(1), receipt.Status, "Transaction failed")
 
-	// Step 4: Confirm details
 	t.Logf("✅ Mined in block %d — gas used: %d", receipt.BlockNumber.Uint64(), receipt.GasUsed)
 }
