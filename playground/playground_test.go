@@ -29,9 +29,10 @@ type Urls struct {
 }
 
 type ClientTestAccount struct {
-	Name       string `json:"name"`
-	Address    string `json:"address"`
-	PrivateKey string `json:"privateKey"`
+	Name          string         `json:"name"`
+	Address       string         `json:"address"`
+	PrivateKey    string         `json:"privateKey"`
+	CommonAddress common.Address `json:"-"`
 }
 
 func GetUrls() Urls {
@@ -69,6 +70,7 @@ func GetAccounts(t *testing.T, urls Urls) map[string]ClientTestAccount {
 
 	accountsMap := make(map[string]ClientTestAccount)
 	for _, acc := range accounts {
+		acc.CommonAddress = common.HexToAddress(acc.Address)
 		accountsMap[acc.Name] = acc
 	}
 	return accountsMap
@@ -122,10 +124,8 @@ func TestSignedTxFromAliceToBob(t *testing.T) {
 	ctx := context.Background()
 	chainID, err := client.ChainID(ctx)
 	require.NoError(t, err)
-	aliceAddr := common.HexToAddress(alice.Address)
-	nonce, err := client.PendingNonceAt(ctx, aliceAddr)
+	nonce, err := client.PendingNonceAt(ctx, alice.CommonAddress)
 	require.NoError(t, err)
-	bobAddr := common.HexToAddress(bob.Address)
 
 	tx := types.NewTx(&types.DynamicFeeTx{
 		ChainID:   chainID,
@@ -133,7 +133,7 @@ func TestSignedTxFromAliceToBob(t *testing.T) {
 		GasFeeCap: big.NewInt(1e9), // Max fee
 		GasTipCap: big.NewInt(1),   // Priority tip
 		Gas:       21_000,
-		To:        &bobAddr,
+		To:        &bob.CommonAddress,
 		Value:     big.NewInt(1e16), // 0.01 ETH
 	})
 	signer := types.NewLondonSigner(chainID)
@@ -154,10 +154,8 @@ func TestSendSignedTxFromAliceToBob(t *testing.T) {
 	ctx := context.Background()
 	chainID, err := client.ChainID(ctx)
 	require.NoError(t, err)
-	aliceAddr := common.HexToAddress(alice.Address)
-	nonce, err := client.PendingNonceAt(ctx, aliceAddr)
+	nonce, err := client.PendingNonceAt(ctx, alice.CommonAddress)
 	require.NoError(t, err)
-	bobAddr := common.HexToAddress(bob.Address)
 
 	tx := types.NewTx(&types.DynamicFeeTx{
 		ChainID:   chainID,
@@ -165,7 +163,7 @@ func TestSendSignedTxFromAliceToBob(t *testing.T) {
 		GasFeeCap: big.NewInt(1e9), // Max fee
 		GasTipCap: big.NewInt(1),   // Priority tip
 		Gas:       21_000,
-		To:        &bobAddr,
+		To:        &bob.CommonAddress,
 		Value:     big.NewInt(1e16), // 0.01 ETH
 	})
 	signer := types.NewLondonSigner(chainID)
@@ -188,13 +186,11 @@ func TestSignedTxAffectsBalances(t *testing.T) {
 	defer client.Close()
 
 	// 💰 Balance before
-	aliceAddress := common.HexToAddress(alice.Address)
-	aliceBefore, _ := client.BalanceAt(context.Background(), aliceAddress, nil)
-	bobAddress := common.HexToAddress(bob.Address)
-	bobBefore, _ := client.BalanceAt(context.Background(), bobAddress, nil)
+	aliceBefore, _ := client.BalanceAt(context.Background(), alice.CommonAddress, nil)
+	bobBefore, _ := client.BalanceAt(context.Background(), bob.CommonAddress, nil)
 
 	// 🧾 Nonce & Chain ID
-	nonce, _ := client.PendingNonceAt(context.Background(), aliceAddress)
+	nonce, _ := client.PendingNonceAt(context.Background(), alice.CommonAddress)
 	chainID, _ := client.ChainID(context.Background())
 
 	// 💸 Build tx
@@ -204,7 +200,7 @@ func TestSignedTxAffectsBalances(t *testing.T) {
 		GasFeeCap: big.NewInt(1e9),
 		GasTipCap: big.NewInt(1),
 		Gas:       21000,
-		To:        &bobAddress,
+		To:        &bob.CommonAddress,
 		Value:     big.NewInt(1e16), // 0.01 ETH
 	})
 
@@ -220,8 +216,8 @@ func TestSignedTxAffectsBalances(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// 💰 After
-	aliceAfter, _ := client.BalanceAt(context.Background(), aliceAddress, nil)
-	bobAfter, _ := client.BalanceAt(context.Background(), bobAddress, nil)
+	aliceAfter, _ := client.BalanceAt(context.Background(), alice.CommonAddress, nil)
+	bobAfter, _ := client.BalanceAt(context.Background(), bob.CommonAddress, nil)
 
 	t.Logf("Alice: %s -> %s", aliceBefore, aliceAfter)
 	t.Logf("Bob:   %s -> %s", bobBefore, bobAfter)
