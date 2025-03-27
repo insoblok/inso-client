@@ -266,3 +266,46 @@ func TestQueryTxByHash(t *testing.T) {
 	require.Equal(t, big.NewInt(1e16), txBack.Value(), "Transferred value mismatch")
 	t.Log("✅ Tx confirmed in block and matches expected recipient + value")
 }
+
+func TestTxReceiptShowsSuccess(t *testing.T) {
+	client, alice, bob, _ := MustGet(t, GetUrls())
+	defer client.Close()
+
+	// Step 1: Build and sign tx
+	nonce, _ := client.PendingNonceAt(context.Background(), alice.CommonAddress)
+	chainID, _ := client.ChainID(context.Background())
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   chainID,
+		Nonce:     nonce,
+		GasTipCap: big.NewInt(1),
+		GasFeeCap: big.NewInt(1e9),
+		Gas:       21_000,
+		To:        &bob.CommonAddress,
+		Value:     big.NewInt(1e16), // 0.01 ETH
+	})
+
+	privKey, _ := crypto.HexToECDSA(strings.TrimPrefix(alice.PrivateKey, "0x"))
+	signedTx, _ := types.SignTx(tx, types.NewLondonSigner(chainID), privKey)
+
+	// Step 2: Send tx
+	err := client.SendTransaction(context.Background(), signedTx)
+	require.NoError(t, err)
+	t.Logf("📤 Sent tx: %s", signedTx.Hash())
+
+	// Step 3: Poll for receipt
+	var receipt *types.Receipt
+	for i := 0; i < 10; i++ {
+		time.Sleep(1 * time.Second)
+		receipt, _ = client.TransactionReceipt(context.Background(), signedTx.Hash())
+		if receipt != nil {
+			break
+		}
+		t.Log("⏳ Waiting for receipt...")
+	}
+	require.NotNil(t, receipt, "Did not receive a receipt in time")
+	require.Equal(t, uint64(1), receipt.Status, "Transaction failed")
+
+	// Step 4: Confirm details
+	t.Logf("✅ Mined in block %d — gas used: %d", receipt.BlockNumber.Uint64(), receipt.GasUsed)
+}
