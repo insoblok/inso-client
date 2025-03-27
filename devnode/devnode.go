@@ -52,7 +52,10 @@ func LoadTestAccounts() *map[string]*TestAccount {
 	return &testAccounts
 }
 
-func FundTestAccounts(devAccount common.Address, rpcClient *rpc.Client, testAccounts *map[string]*TestAccount) *map[string]*TestAccount {
+func FundTestAccounts(
+	devAccount common.Address,
+	rpcClient *rpc.Client,
+	testAccounts *map[string]*TestAccount) *map[string]*TestAccount {
 	ctx := context.Background()
 
 	for name, acc := range *testAccounts {
