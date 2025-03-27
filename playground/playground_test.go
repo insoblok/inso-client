@@ -48,7 +48,7 @@ func GetInfoResponse(t *testing.T, urls Urls) InfoResponse {
 	return info
 }
 
-func GetAccounts(t *testing.T, urls Urls) []ClientTestAccount {
+func GetAccounts(t *testing.T, urls Urls) map[string]ClientTestAccount {
 	resp, err := http.Get(urls.AccountsURL)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -57,7 +57,12 @@ func GetAccounts(t *testing.T, urls Urls) []ClientTestAccount {
 
 	err = json.NewDecoder(resp.Body).Decode(&accounts)
 	require.NoError(t, err)
-	return accounts
+
+	accountsMap := make(map[string]ClientTestAccount)
+	for _, acc := range accounts {
+		accountsMap[acc.Name] = acc
+	}
+	return accountsMap
 }
 
 func TestPlaygroundInfo(t *testing.T) {
@@ -75,14 +80,10 @@ func TestPlaygroundAccounts(t *testing.T) {
 	accounts := GetAccounts(t, GetUrls())
 	require.Len(t, accounts, 10, "Expected 10 test accounts")
 
-	foundAlice := false
-	for _, acc := range accounts {
-		require.NotEmpty(t, acc.PrivateKey, "Account has empty private key")
-		if acc.Name == "alice" {
-			foundAlice = true
-			t.Logf("👑 Found Alice: %s", acc.Address)
-		}
-	}
-	require.True(t, foundAlice, "Expected to find 'alice' in test accounts")
-	t.Logf("✅ Successfully fetched and verified %d accounts", len(accounts))
+	alice, ok := accounts["alice"]
+	require.True(t, ok, "Alice account is not found")
+	require.NotEmpty(t, alice.Address, "Alice's address is empty")
+	require.NotEmpty(t, alice.PrivateKey, "Alice's private key is empty")
+	t.Logf("🎉 Extracted Alice: Address: %s, PrivateKey: %s", alice.Address, alice.PrivateKey)
+
 }
