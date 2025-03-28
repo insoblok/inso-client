@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"eth-toy-client/httpapi"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -67,6 +68,8 @@ func SetupRoutes(devAccount common.Address, rpcPort string, accounts *map[string
 
 	mux.HandleFunc("/sign-tx", signTxHandler(rpcPort, accounts))
 	mux.HandleFunc("/send-tx", handleSendTx(rpcPort, accounts))
+
+	mux.HandleFunc("/api/sign-tx", handleSignTx(rpcPort, accounts))
 
 	return mux
 }
@@ -221,5 +224,52 @@ func handleSendTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 		}
 
 		json.NewEncoder(w).Encode(SendTxResponse{TxHash: signedTx.Hash().Hex()})
+	}
+}
+
+func handleSignTx(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			httpapi.WriteError(w, http.StatusMethodNotAllowed, "MethodNotAllowed", "Only POST is allowed")
+			return
+		}
+
+		var req SignTxRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			httpapi.WriteError(w, http.StatusBadRequest, "InvalidRequest", "Invalid JSON payload")
+			return
+		}
+
+		from, ok := (*accounts)[req.From]
+		if !ok {
+			httpapi.WriteError(w, http.StatusBadRequest, "InvalidAccount", fmt.Sprintf("Sender '%s' not found", req.From))
+			return
+		}
+
+		to, ok := (*accounts)[req.To]
+		if !ok {
+			httpapi.WriteError(w, http.StatusBadRequest, "InvalidAccount", fmt.Sprintf("Recipient '%s' not found", req.To))
+			return
+		}
+
+		val := new(big.Int)
+		_, ok = val.SetString(req.Value, 10)
+		if !ok {
+			httpapi.WriteError(w, http.StatusBadRequest, "INVALID_VALUE", "Invalid value format")
+			return
+		}
+
+		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, to.Address, val, rpcPort)
+		if err != nil {
+			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())
+			return
+		}
+
+		resp := &SignTxAPIResponse{
+			SignedTx: hex.EncodeToString(RlpEncodeBytes(signedTx)),
+			TxHash:   tx.Hash().Hex(),
+		}
+
+		httpapi.WriteOK[SignTxAPIResponse](w, resp)
 	}
 }

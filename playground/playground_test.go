@@ -5,6 +5,8 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
+	"eth-toy-client/devnode"
+	"eth-toy-client/httpapi"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -337,4 +339,37 @@ func TestSendTxViaDevServer(t *testing.T) {
 
 	require.True(t, aliceAfter.Cmp(aliceBefore) < 0, "Alice should have less ETH")
 	require.True(t, bobAfter.Cmp(bobBefore) > 0, "Bob should have received ETH")
+}
+
+func TestSignTxViaDevServerAPI(t *testing.T) {
+	urls := GetUrls()
+	client, alice, bob, _ := MustGet(t, urls)
+	defer client.Close()
+
+	req := map[string]string{
+		"from":  alice.Address,
+		"to":    bob.Address,
+		"value": devnode.ETH.Point01.String(), // 0.01 ETH
+	}
+
+	data, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	resp, err := http.Post(urls.ServerURL+"/api/sign-tx", "application/json", bytes.NewReader(data))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	//require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// 👇 Match APIResponse[SignTxResponse]
+	var parsed httpapi.APIResponse[devnode.SignTxAPIResponse]
+	err = json.NewDecoder(resp.Body).Decode(&parsed)
+	require.NoError(t, err)
+
+	require.Nil(t, parsed.Error)
+	require.NotNil(t, parsed.Data)
+	require.NotEmpty(t, parsed.Data.SignedTx)
+	require.NotEmpty(t, parsed.Data.TxHash)
+
+	t.Logf("🖋️ Signed tx from API: hash=%s", parsed.Data.TxHash)
 }

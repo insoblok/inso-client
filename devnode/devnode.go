@@ -1,9 +1,15 @@
 package devnode
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
+	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"log"
 	"math/big"
@@ -136,20 +142,6 @@ func StartDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
 	return client, ready, nil
 }
 
-const (
-	// ⛽ Gas parameters
-	GasLimitTransfer  uint64 = 21_000
-	GasTipCapLow             = 1             // 1 wei
-	GasFeeCapStandard        = 1_000_000_000 // 1 gwei
-
-	// 💸 ETH Transfer amounts (in wei)
-	EthAmount_001         = 1e16 // 0.01 ETH
-	EthAmount_01          = 1e17 // 0.1 ETH
-	EthAmount_1           = 1e18 // 1 ETH
-	DefaultTransferAmount = EthAmount_001
-	DefaultChainID        = 1337
-)
-
 // EthAmount returns a *big.Int for the given ETH float value.
 func EthAmount(n float64) *big.Int {
 	f := new(big.Float).Mul(big.NewFloat(n), big.NewFloat(1e18))
@@ -172,4 +164,61 @@ type SignTxResponse struct {
 
 type SendTxResponse struct {
 	TxHash string `json:"txHash"`
+}
+
+func BuildAndSignTx(privKey *ecdsa.PrivateKey, from common.Address, to common.Address, value *big.Int, rpcPort string) (*types.Transaction, *types.Transaction, error) {
+	client, err := ethclient.Dial("http://localhost:" + rpcPort)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to dev node: %w", err)
+	}
+	defer client.Close()
+
+	ctx := context.Background()
+
+	nonce, err := client.PendingNonceAt(ctx, from)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get nonce: %w", err)
+	}
+
+	chainID, err := client.ChainID(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get chain ID: %w", err)
+	}
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   chainID,
+		Nonce:     nonce,
+		GasTipCap: big.NewInt(1),
+		GasFeeCap: big.NewInt(1_000_000_000), // 1 gwei
+		Gas:       21_000,
+		To:        &to,
+		Value:     value,
+	})
+
+	signer := types.NewLondonSigner(chainID)
+	signedTx, err := types.SignTx(tx, signer, privKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to sign tx: %w", err)
+	}
+
+	return tx, signedTx, nil
+}
+
+// RlpEncodeBytes returns raw RLP-encoded tx bytes
+func RlpEncodeBytes(tx *types.Transaction) []byte {
+	var buf bytes.Buffer
+	if err := rlp.Encode(&buf, tx); err != nil {
+		log.Fatalf("❌ Failed to RLP-encode tx: %v", err)
+	}
+	return buf.Bytes()
+}
+
+// RlpEncodeHex returns the RLP-encoded tx as hex string (0x-prefixed)
+func RlpEncodeHex(tx *types.Transaction) string {
+	return "0x" + hex.EncodeToString(RlpEncodeBytes(tx))
+}
+
+type SignTxAPIResponse struct {
+	SignedTx string `json:"signedTx"`
+	TxHash   string `json:"txHash"`
 }
