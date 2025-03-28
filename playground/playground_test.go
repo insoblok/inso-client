@@ -2,7 +2,9 @@ package playground
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -225,4 +227,18 @@ func TestTxReceiptShowsSuccess(t *testing.T) {
 	require.Equal(t, uint64(1), receipt.Status, "Transaction failed")
 
 	t.Logf("✅ Mined in block %d — gas used: %d", receipt.BlockNumber.Uint64(), receipt.GasUsed)
+}
+
+func TestGenerateWalletKey(t *testing.T) {
+	privateKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+
+	privateKeyBytes := crypto.FromECDSA(privateKey)
+	publicKey := privateKey.Public().(*ecdsa.PublicKey)
+	publicKeyBytes := crypto.FromECDSAPub(publicKey)
+	address := crypto.PubkeyToAddress(*publicKey)
+
+	fmt.Printf("🔐 Private Key: 0x%x\n", privateKeyBytes)
+	fmt.Printf("🔓 Public Key: 0x%x\n", publicKeyBytes)
+	fmt.Printf("📮 Address: %s\n", address.Hex())
 }
