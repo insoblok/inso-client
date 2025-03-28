@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -65,6 +66,7 @@ func SetupRoutes(devAccount common.Address, rpcPort string, accounts *map[string
 	})
 
 	mux.HandleFunc("/sign-tx", signTxHandler(rpcPort, accounts))
+	mux.HandleFunc("/send-tx", handleSendTx(rpcPort, accounts))
 
 	return mux
 }
@@ -155,4 +157,69 @@ func signTxHandler(rpcPort string, accounts *map[string]*TestAccount) http.Handl
 		json.NewEncoder(w).Encode(resp)
 	}
 
+}
+
+func handleSendTx(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req SignTxRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		fromAcc, ok := (*accounts)[req.From]
+		if !ok {
+			http.Error(w, "From account not found", http.StatusNotFound)
+			return
+		}
+
+		toAcc, ok := (*accounts)[req.To]
+		if !ok {
+			http.Error(w, "To account not found", http.StatusNotFound)
+			return
+		}
+
+		client, err := ethclient.Dial("http://localhost:" + rpcPort)
+		if err != nil {
+			http.Error(w, "Failed to connect to dev node", http.StatusInternalServerError)
+			return
+		}
+		defer client.Close()
+
+		ctx := context.Background()
+		chainID, _ := client.ChainID(ctx)
+		nonce, _ := client.PendingNonceAt(ctx, fromAcc.Address)
+
+		value := big.NewInt(DefaultTransferAmount) // default
+		if req.Value != "" {
+			v, ok := new(big.Int).SetString(req.Value, 10)
+			if !ok {
+				http.Error(w, "Invalid value field", http.StatusBadRequest)
+				return
+			}
+			value = v
+		}
+
+		// 🧾 Construct tx
+		tx := types.NewTx(&types.DynamicFeeTx{
+			ChainID:   chainID,
+			Nonce:     nonce,
+			GasTipCap: big.NewInt(1),
+			GasFeeCap: big.NewInt(1e9),
+			Gas:       21_000,
+			To:        &toAcc.Address,
+			Value:     value,
+		})
+
+		signer := types.NewLondonSigner(chainID)
+		signedTx, _ := types.SignTx(tx, signer, fromAcc.PrivKey)
+
+		err = client.SendTransaction(ctx, signedTx)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to send tx: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(SendTxResponse{TxHash: signedTx.Hash().Hex()})
+	}
 }

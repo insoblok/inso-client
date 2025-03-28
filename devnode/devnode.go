@@ -169,3 +169,7 @@ type SignTxRequest struct {
 type SignTxResponse struct {
 	Tx string `json:"tx"` // signed RLP hex
 }
+
+type SendTxResponse struct {
+	TxHash string `json:"txHash"`
+}

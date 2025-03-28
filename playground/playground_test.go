@@ -297,3 +297,44 @@ func TestSignTxFromAlice(t *testing.T) {
 	require.True(t, strings.HasPrefix(result.Tx, "0x"), "Expected hex-encoded tx")
 	require.Greater(t, len(result.Tx), 10, "Tx should be non-trivial")
 }
+
+func TestSendTxViaDevServer(t *testing.T) {
+	urls := GetUrls()
+	client, alice, bob, _ := MustGet(t, urls)
+	defer client.Close()
+
+	// 💰 Get balances before
+	aliceBefore, _ := client.BalanceAt(context.Background(), alice.CommonAddress, nil)
+	bobBefore, _ := client.BalanceAt(context.Background(), bob.CommonAddress, nil)
+
+	// 📨 Request send-tx
+	payload := map[string]string{
+		"from": alice.Name,
+		"to":   bob.Name,
+	}
+	data, _ := json.Marshal(payload)
+	resp, err := http.Post(urls.ServerURL+"/send-tx", "application/json", bytes.NewReader(data))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var txResp struct {
+		TxHash string `json:"txHash"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&txResp)
+	require.NoError(t, err)
+	t.Logf("📤 Sent tx from alice to bob via dev server: %s", txResp.TxHash)
+
+	// ⏳ Wait for mining
+	time.Sleep(1 * time.Second)
+
+	// 💰 Get balances after
+	aliceAfter, _ := client.BalanceAt(context.Background(), alice.CommonAddress, nil)
+	bobAfter, _ := client.BalanceAt(context.Background(), bob.CommonAddress, nil)
+
+	t.Logf("Alice: %s → %s", aliceBefore, aliceAfter)
+	t.Logf("Bob:   %s → %s", bobBefore, bobAfter)
+
+	require.True(t, aliceAfter.Cmp(aliceBefore) < 0, "Alice should have less ETH")
+	require.True(t, bobAfter.Cmp(bobBefore) > 0, "Bob should have received ETH")
+}
