@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"log"
 	"math/big"
 	"net/http"
 )
@@ -230,24 +231,30 @@ func handleSendTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 func handleSignTx(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
+			log.Printf("⚠️ Invalid method: %s", r.Method)
 			httpapi.WriteError(w, http.StatusMethodNotAllowed, "MethodNotAllowed", "Only POST is allowed")
 			return
 		}
 
 		var req SignTxRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			log.Printf("❌ Failed to decode JSON: %v", err)
 			httpapi.WriteError(w, http.StatusBadRequest, "InvalidRequest", "Invalid JSON payload")
 			return
 		}
 
+		log.Printf("📨 /sign-tx: from=%s → to=%s | value=%s", req.From, req.To, req.Value)
+
 		from, ok := (*accounts)[req.From]
 		if !ok {
+			log.Printf("⚠️ Sender not found: %s", req.From)
 			httpapi.WriteError(w, http.StatusBadRequest, "InvalidAccount", fmt.Sprintf("Sender '%s' not found", req.From))
 			return
 		}
 
 		to, ok := (*accounts)[req.To]
 		if !ok {
+			log.Printf("⚠️ Recipient not found: %s", req.To)
 			httpapi.WriteError(w, http.StatusBadRequest, "InvalidAccount", fmt.Sprintf("Recipient '%s' not found", req.To))
 			return
 		}
@@ -255,15 +262,20 @@ func handleSignTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 		val := new(big.Int)
 		_, ok = val.SetString(req.Value, 10)
 		if !ok {
+			log.Printf("❌ Invalid value format: %s", req.Value)
 			httpapi.WriteError(w, http.StatusBadRequest, "INVALID_VALUE", "Invalid value format")
 			return
 		}
 
 		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, to.Address, val, rpcPort)
 		if err != nil {
+			log.Printf("❌ Signing failed: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())
 			return
 		}
+
+		log.Printf("✅ Signed TX from %s → %s | value=%s | hash=%s",
+			from.Address.Hex(), to.Address.Hex(), val.String(), tx.Hash().Hex())
 
 		resp := &SignTxAPIResponse{
 			SignedTx: hex.EncodeToString(RlpEncodeBytes(signedTx)),

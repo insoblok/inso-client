@@ -347,8 +347,8 @@ func TestSignTxViaDevServerAPI(t *testing.T) {
 	defer client.Close()
 
 	req := map[string]string{
-		"from":  alice.Address,
-		"to":    bob.Address,
+		"from":  alice.Name,
+		"to":    bob.Name,
 		"value": devnode.ETH.Point01.String(), // 0.01 ETH
 	}
 
