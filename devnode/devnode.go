@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
 	"log"
+	"math/big"
 	"os"
 	"os/exec"
 	"strings"
@@ -133,4 +134,38 @@ func StartDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
 	}()
 
 	return client, ready, nil
+}
+
+const (
+	// ⛽ Gas parameters
+	GasLimitTransfer  uint64 = 21_000
+	GasTipCapLow             = 1             // 1 wei
+	GasFeeCapStandard        = 1_000_000_000 // 1 gwei
+
+	// 💸 ETH Transfer amounts (in wei)
+	EthAmount_001         = 1e16 // 0.01 ETH
+	EthAmount_01          = 1e17 // 0.1 ETH
+	EthAmount_1           = 1e18 // 1 ETH
+	DefaultTransferAmount = EthAmount_001
+	DefaultChainID        = 1337
+)
+
+// EthAmount returns a *big.Int for the given ETH float value.
+func EthAmount(n float64) *big.Int {
+	f := new(big.Float).Mul(big.NewFloat(n), big.NewFloat(1e18))
+	i := new(big.Int)
+	f.Int(i)
+	return i
+}
+
+type SignTxRequest struct {
+	From    string  `json:"from"`
+	To      string  `json:"to"`
+	Value   string  `json:"value"`             // optional (wei, as string)
+	Nonce   *uint64 `json:"nonce,omitempty"`   // optional
+	ChainID *int64  `json:"chainId,omitempty"` // optional
+}
+
+type SignTxResponse struct {
+	Tx string `json:"tx"` // signed RLP hex
 }

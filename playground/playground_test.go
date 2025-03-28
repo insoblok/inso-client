@@ -1,6 +1,7 @@
 package playground
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
@@ -266,4 +267,33 @@ func TestRecoverPublicKeyFromSignature(t *testing.T) {
 	t.Logf("🧠 Recovered PubKey: %x", recoveredBytes)
 
 	require.Equal(t, originalBytes, recoveredBytes, "Recovered public key should match original")
+}
+
+func TestSignTxFromAlice(t *testing.T) {
+	urls := GetUrls()
+	accountMap := GetAccounts(t, urls)
+
+	alice := accountMap["alice"]
+	bob := accountMap["bob"]
+
+	payload := map[string]any{
+		"from":  alice.Name,
+		"to":    bob.Address,
+		"value": "10000000000000000", // 0.01 ETH
+	}
+
+	body, _ := json.Marshal(payload)
+	resp, err := http.Post(urls.ServerURL+"/sign-tx", "application/json", bytes.NewReader(body))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var result struct {
+		Tx string `json:"tx"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	require.NoError(t, err)
+
+	t.Logf("🖋️ Signed Tx: %s", result.Tx)
+	require.True(t, strings.HasPrefix(result.Tx, "0x"), "Expected hex-encoded tx")
+	require.Greater(t, len(result.Tx), 10, "Tx should be non-trivial")
 }
