@@ -222,3 +222,6 @@ type SignTxAPIResponse struct {
 	SignedTx string `json:"signedTx"`
 	TxHash   string `json:"txHash"`
 }
+type SendTxAPIResponse struct {
+	TxHash string `json:"txHash"`
+}

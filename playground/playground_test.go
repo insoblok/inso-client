@@ -359,9 +359,6 @@ func TestSignTxViaDevServerAPI(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	//require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	// 👇 Match APIResponse[SignTxResponse]
 	var parsed httpapi.APIResponse[devnode.SignTxAPIResponse]
 	err = json.NewDecoder(resp.Body).Decode(&parsed)
 	require.NoError(t, err)
@@ -372,4 +369,48 @@ func TestSignTxViaDevServerAPI(t *testing.T) {
 	require.NotEmpty(t, parsed.Data.TxHash)
 
 	t.Logf("🖋️ Signed tx from API: hash=%s", parsed.Data.TxHash)
+}
+
+func TestSendTxViaDevServerAPI(t *testing.T) {
+	urls := GetUrls()
+	client, alice, bob, _ := MustGet(t, urls)
+	defer client.Close()
+
+	value := devnode.ETH.Point01.String()
+
+	req := devnode.SignTxRequest{
+		From:  alice.Name,
+		To:    bob.Name,
+		Value: value,
+	}
+
+	data, _ := json.Marshal(req)
+
+	res, err := http.Post(urls.ServerURL+"/api/send-tx", "application/json", bytes.NewReader(data))
+	require.NoError(t, err)
+	defer res.Body.Close()
+
+	log.Println(res.StatusCode)
+	log.Println(res.Header)
+	log.Println(res.Body)
+	log.Println(string(data))
+
+	var apiResp httpapi.APIResponse[devnode.SendTxAPIResponse]
+	err = json.NewDecoder(res.Body).Decode(&apiResp)
+	require.NoError(t, err)
+
+	if apiResp.Error != nil {
+		t.Fatalf("❌ API Error: %s — %s", apiResp.Error.Code, apiResp.Error.Message)
+	}
+
+	require.NotEmpty(t, apiResp.Data.TxHash)
+	t.Logf("📤 Sent tx from Alice to Bob via API: %s", apiResp.Data.TxHash)
+
+	// ⛏ Confirm tx impact
+	time.Sleep(1 * time.Second)
+	aliceAfter, _ := client.BalanceAt(context.Background(), alice.CommonAddress, nil)
+	bobAfter, _ := client.BalanceAt(context.Background(), bob.CommonAddress, nil)
+
+	t.Logf("Alice: %s", aliceAfter)
+	t.Logf("Bob:   %s", bobAfter)
 }
