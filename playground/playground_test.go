@@ -242,3 +242,28 @@ func TestGenerateWalletKey(t *testing.T) {
 	fmt.Printf("🔓 Public Key: 0x%x\n", publicKeyBytes)
 	fmt.Printf("📮 Address: %s\n", address.Hex())
 }
+
+func TestRecoverPublicKeyFromSignature(t *testing.T) {
+	privateKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+
+	publicKey := privateKey.Public().(*ecdsa.PublicKey)
+	message := []byte("Test message for signing")
+	hash := crypto.Keccak256Hash(message)
+
+	// Sign the message
+	sig, err := crypto.Sign(hash.Bytes(), privateKey)
+	require.NoError(t, err)
+
+	// Recover public key
+	recovered, err := crypto.SigToPub(hash.Bytes(), sig)
+	require.NoError(t, err)
+
+	originalBytes := crypto.FromECDSAPub(publicKey)
+	recoveredBytes := crypto.FromECDSAPub(recovered)
+
+	t.Logf("🔐 Original PubKey:  %x", originalBytes)
+	t.Logf("🧠 Recovered PubKey: %x", recoveredBytes)
+
+	require.Equal(t, originalBytes, recoveredBytes, "Recovered public key should match original")
+}
