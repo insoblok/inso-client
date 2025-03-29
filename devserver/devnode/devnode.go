@@ -150,14 +150,6 @@ func EthAmount(n float64) *big.Int {
 	return i
 }
 
-type SignTxRequest struct {
-	From    string  `json:"from"`
-	To      string  `json:"to"`
-	Value   string  `json:"value"`             // optional (wei, as string)
-	Nonce   *uint64 `json:"nonce,omitempty"`   // optional
-	ChainID *int64  `json:"chainId,omitempty"` // optional
-}
-
 type SignTxResponse struct {
 	Tx string `json:"tx"` // signed RLP hex
 }
@@ -216,12 +208,4 @@ func RlpEncodeBytes(tx *types.Transaction) []byte {
 // RlpEncodeHex returns the RLP-encoded tx as hex string (0x-prefixed)
 func RlpEncodeHex(tx *types.Transaction) string {
 	return "0x" + hex.EncodeToString(RlpEncodeBytes(tx))
-}
-
-type SignTxAPIResponse struct {
-	SignedTx string `json:"signedTx"`
-	TxHash   string `json:"txHash"`
-}
-type SendTxAPIResponse struct {
-	TxHash string `json:"txHash"`
 }

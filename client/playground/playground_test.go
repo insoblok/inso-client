@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"eth-toy-client/core/consts"
 	"eth-toy-client/core/httpapi"
-	"eth-toy-client/devserver/devnode"
+	"eth-toy-client/core/model"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -360,7 +360,7 @@ func TestSignTxViaDevServerAPI(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	var parsed httpapi.APIResponse[devnode.SignTxAPIResponse]
+	var parsed httpapi.APIResponse[model.SignTxAPIResponse]
 	err = json.NewDecoder(resp.Body).Decode(&parsed)
 	require.NoError(t, err)
 
@@ -379,7 +379,7 @@ func TestSendTxViaDevServerAPI(t *testing.T) {
 
 	value := consts.ETH.Point01.String()
 
-	req := devnode.SignTxRequest{
+	req := model.SignTxRequest{
 		From:  alice.Name,
 		To:    bob.Name,
 		Value: value,
@@ -396,7 +396,7 @@ func TestSendTxViaDevServerAPI(t *testing.T) {
 	log.Println(res.Body)
 	log.Println(string(data))
 
-	var apiResp httpapi.APIResponse[devnode.SendTxAPIResponse]
+	var apiResp httpapi.APIResponse[model.SendTxAPIResponse]
 	err = json.NewDecoder(res.Body).Decode(&apiResp)
 	require.NoError(t, err)
 

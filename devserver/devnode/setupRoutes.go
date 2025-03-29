@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"eth-toy-client/core/consts"
 	"eth-toy-client/core/httpapi"
+	"eth-toy-client/core/model"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -79,7 +80,7 @@ func SetupRoutes(devAccount common.Address, rpcPort string, accounts *map[string
 
 func signTxHandler(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req SignTxRequest
+		var req model.SignTxRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request payload", http.StatusBadRequest)
 			return
@@ -167,7 +168,7 @@ func signTxHandler(rpcPort string, accounts *map[string]*TestAccount) http.Handl
 
 func handleSendTx(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req SignTxRequest
+		var req model.SignTxRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request payload", http.StatusBadRequest)
 			return
@@ -238,7 +239,7 @@ func handleSignTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 			return
 		}
 
-		var req SignTxRequest
+		var req model.SignTxRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			log.Printf("❌ Failed to decode JSON: %v", err)
 			httpapi.WriteError(w, http.StatusBadRequest, "InvalidRequest", "Invalid JSON payload")
@@ -279,12 +280,12 @@ func handleSignTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 		log.Printf("✅ Signed TX from %s → %s | value=%s | hash=%s",
 			from.Address.Hex(), to.Address.Hex(), val.String(), tx.Hash().Hex())
 
-		resp := &SignTxAPIResponse{
+		resp := &model.SignTxAPIResponse{
 			SignedTx: hex.EncodeToString(RlpEncodeBytes(signedTx)),
 			TxHash:   tx.Hash().Hex(),
 		}
 
-		httpapi.WriteOK[SignTxAPIResponse](w, resp)
+		httpapi.WriteOK[model.SignTxAPIResponse](w, resp)
 	}
 }
 
@@ -296,7 +297,7 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 			return
 		}
 
-		var req SignTxRequest
+		var req model.SignTxRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			log.Printf("❌ Failed to decode JSON: %v", err)
 			httpapi.WriteError(w, http.StatusBadRequest, "InvalidRequest", "Invalid JSON payload")
@@ -350,9 +351,9 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 
 		log.Printf("✅ Sent TX: %s", tx.Hash().Hex())
 
-		resp := &SendTxAPIResponse{
+		resp := &model.SendTxAPIResponse{
 			TxHash: tx.Hash().Hex(),
 		}
-		httpapi.WriteOK[SendTxAPIResponse](w, resp)
+		httpapi.WriteOK[model.SendTxAPIResponse](w, resp)
 	}
 }
