@@ -1,4 +1,4 @@
-package model
+package types
 
 type SignTxAPIResponse struct {
 	SignedTx string `json:"signedTx"`
