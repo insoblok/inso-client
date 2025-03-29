@@ -1,4 +1,4 @@
-package devnode
+package consts
 
 import "math/big"
 

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
+	"eth-toy-client/core/consts"
 	"eth-toy-client/core/httpapi"
 	"eth-toy-client/devserver/devnode"
 	"fmt"
@@ -349,7 +350,7 @@ func TestSignTxViaDevServerAPI(t *testing.T) {
 	req := map[string]string{
 		"from":  alice.Name,
 		"to":    bob.Name,
-		"value": devnode.ETH.Point01.String(), // 0.01 ETH
+		"value": consts.ETH.Point01.String(), // 0.01 ETH
 	}
 
 	data, err := json.Marshal(req)
@@ -376,7 +377,7 @@ func TestSendTxViaDevServerAPI(t *testing.T) {
 	client, alice, bob, _ := MustGet(t, urls)
 	defer client.Close()
 
-	value := devnode.ETH.Point01.String()
+	value := consts.ETH.Point01.String()
 
 	req := devnode.SignTxRequest{
 		From:  alice.Name,

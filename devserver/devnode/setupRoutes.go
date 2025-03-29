@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"eth-toy-client/core/consts"
 	"eth-toy-client/core/httpapi"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
@@ -91,7 +92,7 @@ func signTxHandler(rpcPort string, accounts *map[string]*TestAccount) http.Handl
 		}
 
 		toAddr := common.HexToAddress(req.To)
-		value := big.NewInt(DefaultTransferAmount) // default
+		value := big.NewInt(consts.DefaultTransferAmount) // default
 		if req.Value != "" {
 			v, ok := new(big.Int).SetString(req.Value, 10)
 			if !ok {
@@ -122,7 +123,7 @@ func signTxHandler(rpcPort string, accounts *map[string]*TestAccount) http.Handl
 			}
 		}
 
-		chainID := big.NewInt(DefaultChainID)
+		chainID := big.NewInt(consts.DefaultChainID)
 		if req.ChainID != nil {
 			chainID = big.NewInt(*req.ChainID)
 		} else {
@@ -195,7 +196,7 @@ func handleSendTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 		chainID, _ := client.ChainID(ctx)
 		nonce, _ := client.PendingNonceAt(ctx, fromAcc.Address)
 
-		value := big.NewInt(DefaultTransferAmount) // default
+		value := big.NewInt(consts.DefaultTransferAmount) // default
 		if req.Value != "" {
 			v, ok := new(big.Int).SetString(req.Value, 10)
 			if !ok {

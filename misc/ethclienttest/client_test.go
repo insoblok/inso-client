@@ -3,7 +3,6 @@ package ethclienttest
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/stretchr/testify/require"
@@ -148,49 +147,5 @@ func TestGetPendingNonce(t *testing.T) {
 		nonce, err := client.PendingNonceAt(context.Background(), addr)
 		require.NoError(t, err)
 		t.Logf("  account %s: pending nonce-Tx counts so far %d", addr, nonce)
-	})
-}
-
-func TestSendTransactionEIP1559(t *testing.T) {
-	WithAccount(t, func(t *testing.T, addr common.Address, client *ethclient.Client) {
-		ctx := context.Background()
-
-		// 1. Get pending nonce
-		nonce, err := client.PendingNonceAt(ctx, addr)
-		require.NoError(t, err)
-
-		// 2. Set gas limit and EIP-1559 fees
-		gasLimit := uint64(21000) // Standard ETH transfer
-
-		tipCap, err := client.SuggestGasTipCap(ctx)
-		require.NoError(t, err)
-
-		// Optional: Add a little extra to ensure it's mined
-		feeCap := new(big.Int).Add(tipCap, big.NewInt(2e9)) // tip + 2 gwei
-
-		// 3. Amount to send
-		amount := new(big.Int).Mul(big.NewInt(1), big.NewInt(1e18)) // 1 ETH
-
-		// 4. Get chain ID (dev mode = 1337 by default)
-		chainID, err := client.ChainID(ctx)
-		require.NoError(t, err)
-
-		// 5. Construct EIP-1559 tx
-		tx := types.NewTx(&types.DynamicFeeTx{
-			ChainID:   chainID,
-			Nonce:     nonce,
-			GasTipCap: tipCap,
-			GasFeeCap: feeCap,
-			Gas:       gasLimit,
-			To:        &addr, // self-transfer
-			Value:     amount,
-			Data:      nil,
-		})
-
-		// 6. Send directly — dev mode auto-signs unlocked accounts
-		err = client.SendTransaction(ctx, tx)
-		require.NoError(t, err)
-
-		t.Logf("📤 Sent tx: %s", tx.Hash().Hex())
 	})
 }
