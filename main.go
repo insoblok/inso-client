@@ -9,7 +9,7 @@ import (
 
 func main() {
 	// Connect to the running dev node via HTTP
-	client, err := ethclient.Dial("http://localhost:8545")
+	client, err := ethclient.Dial("http://localhost:8565")
 	if err != nil {
 		log.Fatal("Failed to connect to Ethereum node:", err)
 	}
