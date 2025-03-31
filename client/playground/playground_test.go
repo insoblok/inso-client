@@ -377,35 +377,21 @@ func TestSendTxViaDevServerAPI(t *testing.T) {
 	client, alice, bob, _ := MustGet(t, urls)
 	defer client.Close()
 
-	value := consts.ETH.Point01.String()
-
 	req := toytypes.SignTxRequest{
 		From:  alice.Name,
 		To:    bob.Name,
-		Value: value,
+		Value: consts.ETH.Point01.String(),
 	}
 
-	data, _ := json.Marshal(req)
-
-	res, err := http.Post(urls.ServerURL+"/api/send-tx", "application/json", bytes.NewReader(data))
-	require.NoError(t, err)
-	defer res.Body.Close()
-
-	log.Println(res.StatusCode)
-	log.Println(res.Header)
-	log.Println(res.Body)
-	log.Println(string(data))
-
-	var apiResp httpapi.APIResponse[toytypes.SendTxAPIResponse]
-	err = json.NewDecoder(res.Body).Decode(&apiResp)
+	apiResp, apiErr, err := httpapi.PostJSON[toytypes.SendTxAPIResponse](urls.ServerURL+"/api/send-tx", req)
 	require.NoError(t, err)
 
-	if apiResp.Error != nil {
-		t.Fatalf("❌ API Error: %s — %s", apiResp.Error.Code, apiResp.Error.Message)
+	if apiErr != nil {
+		t.Fatalf("❌ API Error: %s — %s", apiErr.Code, apiErr.Message)
 	}
 
-	require.NotEmpty(t, apiResp.Data.TxHash)
-	t.Logf("📤 Sent tx from Alice to Bob via API: %s", apiResp.Data.TxHash)
+	require.NotEmpty(t, apiResp.TxHash)
+	t.Logf("📤 Sent tx from Alice to Bob via API: %s", apiResp.TxHash)
 
 	// ⛏ Confirm tx impact
 	time.Sleep(1 * time.Second)
