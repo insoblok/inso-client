@@ -231,3 +231,60 @@ func TestParseAPIResponse_EmptyErrorObject(t *testing.T) {
 
 	t.Log("✅ Parsed empty error object correctly")
 }
+
+type DummyPayload struct {
+	Message string `json:"message"`
+}
+
+type DummyResponse struct {
+	Echo string `json:"echo"`
+}
+
+func TestPostJSON_Success(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := APIResponse[DummyResponse]{
+			Status: http.StatusOK,
+			Data:   &DummyResponse{Echo: "pong"},
+		}
+		WriteJSON(w, http.StatusOK, resp.Data, nil)
+	}))
+	defer server.Close()
+
+	payload := DummyPayload{Message: "ping"}
+	data, apiErr, err := PostJSON[DummyResponse](server.URL, payload)
+
+	require.NoError(t, err)
+	require.Nil(t, apiErr)
+	require.Equal(t, "pong", data.Echo)
+}
+
+func TestPostJSON_APIError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		WriteError(w, http.StatusBadRequest, "Oopsie", "Something went wrong")
+	}))
+	defer server.Close()
+
+	payload := DummyPayload{Message: "bad"}
+	data, apiErr, err := PostJSON[DummyResponse](server.URL, payload)
+
+	require.Nil(t, data)
+	require.NoError(t, err)
+	require.NotNil(t, apiErr)
+	require.Equal(t, "Oopsie", apiErr.Code)
+}
+
+func TestPostJSON_BadServer(t *testing.T) {
+	_, _, err := PostJSON[DummyResponse]("http://localhost:9999", DummyPayload{Message: "yo"})
+	require.Error(t, err)
+}
+
+func TestPostJSON_InvalidResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("{not valid json}"))
+	}))
+	defer server.Close()
+
+	_, _, err := PostJSON[DummyResponse](server.URL, DummyPayload{Message: "yo"})
+	require.Error(t, err)
+}
