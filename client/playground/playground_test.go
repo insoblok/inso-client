@@ -382,3 +382,24 @@ func TestDeployCounterContractViaAPI(t *testing.T) {
 	t.Logf("🧾 TxHash: %s", txHash)
 	t.Logf("🏠 Contract deployed at: %s", contractAddr.Hex())
 }
+
+func TestDeployContract_InvalidBytecode(t *testing.T) {
+	urls := GetUrls()
+	client, alice, _, _ := MustGet(t, urls)
+	defer client.Close()
+	ctx := context.Background()
+
+	// 🧱 Get valid bytecode from binding
+	bytecode := counter.CounterMetaData.Bin
+
+	// 🧪 Tamper with bytecode: flip some characters near the start
+	badBytecode := "0xDEAD" + bytecode[6:]
+
+	contractAddr, _, err := contract.DeployContract(ctx, client, urls.ServerURL, alice.Name, badBytecode)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "contract code is empty")
+	t.Logf("✅ Expected error from bad bytecode: %v", err)
+
+	// No need to assert txHash is empty
+	require.Equal(t, common.Address{}, contractAddr)
+}
