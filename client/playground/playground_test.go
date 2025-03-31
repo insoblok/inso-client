@@ -353,7 +353,7 @@ func TestSignTxViaDevServerAPI(t *testing.T) {
 		"value": consts.ETH.Point01.String(), // 0.01 ETH
 	}
 
-	apiResp, apiErr, err := httpapi.PostJSON[toytypes.SignTxAPIResponse](urls.ServerURL+"/api/sign-tx", req)
+	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SignTxAPIResponse](urls.ServerURL+"/api/sign-tx", req)
 	require.NoError(t, err)
 
 	require.Nil(t, apiErr)
@@ -374,7 +374,7 @@ func TestSendTxViaDevServerAPI(t *testing.T) {
 		Value: consts.ETH.Point01.String(),
 	}
 
-	apiResp, apiErr, err := httpapi.PostJSON[toytypes.SendTxAPIResponse](urls.ServerURL+"/api/send-tx", req)
+	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SendTxAPIResponse](urls.ServerURL+"/api/send-tx", req)
 	require.NoError(t, err)
 
 	if apiErr != nil {

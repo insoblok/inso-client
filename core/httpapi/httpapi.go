@@ -59,7 +59,7 @@ func ParseAPIResponse[T any](resp *http.Response) (*T, *APIError, error) {
 	return parsed.Data, nil, nil
 }
 
-func PostJSON[T any](url string, payload any) (*T, *APIError, error) {
+func PostWithAPIResponse[T any](url string, payload any) (*T, *APIError, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal request payload: %w", err)

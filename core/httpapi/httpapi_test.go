@@ -251,7 +251,7 @@ func TestPostJSON_Success(t *testing.T) {
 	defer server.Close()
 
 	payload := DummyPayload{Message: "ping"}
-	data, apiErr, err := PostJSON[DummyResponse](server.URL, payload)
+	data, apiErr, err := PostWithAPIResponse[DummyResponse](server.URL, payload)
 
 	require.NoError(t, err)
 	require.Nil(t, apiErr)
@@ -265,7 +265,7 @@ func TestPostJSON_APIError(t *testing.T) {
 	defer server.Close()
 
 	payload := DummyPayload{Message: "bad"}
-	data, apiErr, err := PostJSON[DummyResponse](server.URL, payload)
+	data, apiErr, err := PostWithAPIResponse[DummyResponse](server.URL, payload)
 
 	require.Nil(t, data)
 	require.NoError(t, err)
@@ -274,7 +274,7 @@ func TestPostJSON_APIError(t *testing.T) {
 }
 
 func TestPostJSON_BadServer(t *testing.T) {
-	_, _, err := PostJSON[DummyResponse]("http://localhost:9999", DummyPayload{Message: "yo"})
+	_, _, err := PostWithAPIResponse[DummyResponse]("http://localhost:9999", DummyPayload{Message: "yo"})
 	require.Error(t, err)
 }
 
@@ -285,6 +285,6 @@ func TestPostJSON_InvalidResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, _, err := PostJSON[DummyResponse](server.URL, DummyPayload{Message: "yo"})
+	_, _, err := PostWithAPIResponse[DummyResponse](server.URL, DummyPayload{Message: "yo"})
 	require.Error(t, err)
 }
