@@ -327,14 +327,17 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 
 		if req.To == "" {
 			// 🚀 Contract Deployment
+			log.Printf("📨 /send-tx: deploying contract from=%s", req.From)
+
 			if req.Data == "" {
+				log.Printf("❌ Missing contract bytecode in data field")
 				httpapi.WriteError(w, http.StatusBadRequest, "MissingData", "Contract deployment requires 'data' field")
 				return
 			}
-			log.Printf("📨 /send-tx: deploying contract from=%s", req.From)
 
 			dataBytes, err := hex.DecodeString(strings.TrimPrefix(req.Data, "0x"))
 			if err != nil {
+				log.Printf("❌ Failed to decode contract bytecode: %v", err)
 				httpapi.WriteError(w, http.StatusBadRequest, "InvalidData", "Failed to decode contract bytecode")
 				return
 			}
@@ -352,12 +355,16 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 			log.Printf("📨 /send-tx: from=%s → to=%s | value=%s", req.From, req.To, req.Value)
 		}
 
-		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, toAddr, val, rpcPort, data)
+		_, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, toAddr, val, rpcPort, data)
 		if err != nil {
 			log.Printf("❌ Signing failed: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())
 			return
 		}
+
+		log.Printf("🧾 SignedTx hash: %s", signedTx.Hash().Hex())
+		log.Printf("📦 RLP Encoded TX: %s", hex.EncodeToString(RlpEncodeBytes(signedTx)))
+		log.Printf("📄 TX: to=%v, nonce=%d, value=%s", toAddr, signedTx.Nonce(), val.String())
 
 		client, err := ethclient.Dial("http://localhost:" + rpcPort)
 		if err != nil {
@@ -374,10 +381,10 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 			return
 		}
 
-		log.Printf("✅ Sent TX: %s", tx.Hash().Hex())
+		log.Printf("✅ Sent TX: %s", signedTx.Hash().Hex())
 
 		httpapi.WriteOK[toytypes.SendTxAPIResponse](w, &toytypes.SendTxAPIResponse{
-			TxHash: tx.Hash().Hex(),
+			TxHash: signedTx.Hash().Hex(),
 		})
 	}
 }

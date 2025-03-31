@@ -396,25 +396,29 @@ func TestSendTxViaDevServerAPI(t *testing.T) {
 
 func TestDeployCounterContractViaAPI(t *testing.T) {
 	urls := GetUrls()
+
+	// ✅ Use our MustGet helper for unified client and accounts
 	client, alice, _, _ := MustGet(t, urls)
 	defer client.Close()
 
+	// 🧱 Load contract bytecode from Go binding (CounterMetaData)
 	data := strings.TrimPrefix(counter.CounterMetaData.Bin, "0x")
-
 	bytecode := strings.TrimSpace(data)
 	if !strings.HasPrefix(bytecode, "0x") {
 		bytecode = "0x" + bytecode
 	}
 
-	// 📨 Compose SignTxRequest (no "To" field for contract deployment)
+	t.Logf("📦 Deploying contract using bytecode (length %d bytes)", len(bytecode)/2)
+
+	// 📨 Compose SignTxRequest (no "To" field means contract deployment)
 	req := toytypes.SignTxRequest{
 		From:  alice.Name,
-		To:    "",
+		To:    "", // No recipient for contract deployment
 		Value: "0",
 		Data:  bytecode,
 	}
 
-	// 📤 Send via /api/send-tx
+	// 📤 Send the request to DevServer
 	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SendTxAPIResponse](urls.ServerURL+"/api/send-tx", req)
 	require.NoError(t, err)
 	require.Nil(t, apiErr)
@@ -422,14 +426,11 @@ func TestDeployCounterContractViaAPI(t *testing.T) {
 
 	t.Logf("🚀 Contract deployment tx hash: %s", apiResp.TxHash)
 
-	// 🕰️ Wait to be mined
-	time.Sleep(1 * time.Second)
-
-	// 🔍 Query the receipt to get contract address
+	// ⏳ Wait for transaction to be mined and get the receipt
 	receipt := WaitForReceipt(t, client, common.HexToHash(apiResp.TxHash))
 	require.NotNil(t, receipt)
-	t.Logf("✅ Contract deployed at: %s", receipt.ContractAddress.Hex())
 
+	t.Logf("✅ Contract deployed at: %s (block %d)", receipt.ContractAddress.Hex(), receipt.BlockNumber.Uint64())
 }
 
 func WaitForReceipt(t *testing.T, client *ethclient.Client, txHash common.Hash) *types.Receipt {
@@ -437,8 +438,10 @@ func WaitForReceipt(t *testing.T, client *ethclient.Client, txHash common.Hash) 
 	for i := 0; i < 60; i++ {
 		receipt, err := client.TransactionReceipt(ctx, txHash)
 		if err == nil {
+			t.Logf("🧾 Receipt received after %d sec", i)
 			return receipt
 		}
+		t.Logf("⏳ Waiting for receipt... (%d)", i)
 		time.Sleep(1 * time.Second)
 	}
 	t.Fatalf("⏱️ Timeout waiting for receipt of tx %s", txHash.Hex())
