@@ -2,7 +2,10 @@ package contractkit
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 type CompileOptions struct {
@@ -10,14 +13,20 @@ type CompileOptions struct {
 	OutDir          string // Output directory for .abi and .bin
 }
 
-// CompileContract runs solc to generate ABI and BIN files for the given Solidity contract
 func CompileContract(opts CompileOptions) error {
+	contractName := strings.TrimSuffix(filepath.Base(opts.SolContractPath), ".sol")
+	outDir := filepath.Join(opts.OutDir, contractName)
+
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create output dir: %w", err)
+	}
+
 	cmd := exec.Command(
 		"solc",
 		"--abi",
 		"--bin",
 		"--overwrite",
-		"-o", opts.OutDir,
+		"-o", outDir,
 		opts.SolContractPath,
 	)
 
@@ -26,6 +35,6 @@ func CompileContract(opts CompileOptions) error {
 		return fmt.Errorf("solc failed: %w\nOutput: %s", err, string(out))
 	}
 
-	fmt.Printf("✅ Compiled %s → %s\n", opts.SolContractPath, opts.OutDir)
+	fmt.Printf("✅ Compiled %s → %s\n", opts.SolContractPath, outDir)
 	return nil
 }
