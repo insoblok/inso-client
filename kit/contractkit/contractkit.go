@@ -9,18 +9,31 @@ import (
 )
 
 type CompileOptions struct {
-	SolContractPath string // Path to Solidity source (e.g. contracts/Counter.sol)
-	OutDir          string // Output directory for .abi and .bin
+	SolContractPath string // e.g. "contracts/Counter.sol"
+	OutBaseDir      string // e.g. "build/"
+	Clean           bool   // clean target dir before compiling
 }
 
 func CompileContract(opts CompileOptions) error {
-	contractName := strings.TrimSuffix(filepath.Base(opts.SolContractPath), ".sol")
-	outDir := filepath.Join(opts.OutDir, contractName)
+	// 🧠 Derive contract name (no extension)
+	base := filepath.Base(opts.SolContractPath)
+	name := strings.TrimSuffix(base, filepath.Ext(base)) // "Counter"
 
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create output dir: %w", err)
+	outDir := filepath.Join(opts.OutBaseDir, name) // e.g. "build/Counter"
+
+	// 🧹 Clean if requested
+	if opts.Clean {
+		if err := os.RemoveAll(outDir); err != nil {
+			return fmt.Errorf("failed to clean outdir: %w", err)
+		}
 	}
 
+	// 📂 Ensure output dir exists
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create outdir: %w", err)
+	}
+
+	// 🛠️ Run solc
 	cmd := exec.Command(
 		"solc",
 		"--abi",
