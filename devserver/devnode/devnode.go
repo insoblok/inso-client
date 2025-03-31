@@ -142,14 +142,6 @@ func StartDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
 	return client, ready, nil
 }
 
-// EthAmount returns a *big.Int for the given ETH float value.
-func EthAmount(n float64) *big.Int {
-	f := new(big.Float).Mul(big.NewFloat(n), big.NewFloat(1e18))
-	i := new(big.Int)
-	f.Int(i)
-	return i
-}
-
 type SignTxResponse struct {
 	Tx string `json:"tx"` // signed RLP hex
 }
