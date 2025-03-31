@@ -38,7 +38,6 @@ func CompileContract(opts CompileOptions) error {
 		"solc",
 		"--abi",
 		"--bin",
-		"--overwrite",
 		"-o", outDir,
 		opts.SolContractPath,
 	)
