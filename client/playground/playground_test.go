@@ -353,23 +353,14 @@ func TestSignTxViaDevServerAPI(t *testing.T) {
 		"value": consts.ETH.Point01.String(), // 0.01 ETH
 	}
 
-	data, err := json.Marshal(req)
+	apiResp, apiErr, err := httpapi.PostJSON[toytypes.SignTxAPIResponse](urls.ServerURL+"/api/sign-tx", req)
 	require.NoError(t, err)
 
-	resp, err := http.Post(urls.ServerURL+"/api/sign-tx", "application/json", bytes.NewReader(data))
-	require.NoError(t, err)
-	defer resp.Body.Close()
+	require.Nil(t, apiErr)
+	require.NotNil(t, apiResp.SignedTx)
+	require.NotEmpty(t, apiResp.TxHash)
 
-	var parsed httpapi.APIResponse[toytypes.SignTxAPIResponse]
-	err = json.NewDecoder(resp.Body).Decode(&parsed)
-	require.NoError(t, err)
-
-	require.Nil(t, parsed.Error)
-	require.NotNil(t, parsed.Data)
-	require.NotEmpty(t, parsed.Data.SignedTx)
-	require.NotEmpty(t, parsed.Data.TxHash)
-
-	t.Logf("🖋️ Signed tx from API: hash=%s", parsed.Data.TxHash)
+	t.Logf("🖋️ Signed tx from API: hash=%s", apiResp.TxHash)
 }
 
 func TestSendTxViaDevServerAPI(t *testing.T) {
