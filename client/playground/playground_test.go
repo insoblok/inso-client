@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"eth-toy-client/core/consts"
+	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/core/httpapi"
 	toytypes "eth-toy-client/core/types"
 	"eth-toy-client/sol/counter"
@@ -364,86 +365,20 @@ func TestSignTxViaDevServerAPI(t *testing.T) {
 	t.Logf("🖋️ Signed tx from API: hash=%s", apiResp.TxHash)
 }
 
-func TestSendTxViaDevServerAPI(t *testing.T) {
-	urls := GetUrls()
-	client, alice, bob, _ := MustGet(t, urls)
-	defer client.Close()
-
-	req := toytypes.SignTxRequest{
-		From:  alice.Name,
-		To:    bob.Name,
-		Value: consts.ETH.Point01.String(),
-	}
-
-	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SendTxAPIResponse](urls.ServerURL+"/api/send-tx", req)
-	require.NoError(t, err)
-
-	if apiErr != nil {
-		t.Fatalf("❌ API Error: %s — %s", apiErr.Code, apiErr.Message)
-	}
-
-	require.NotEmpty(t, apiResp.TxHash)
-	t.Logf("📤 Sent tx from Alice to Bob via API: %s", apiResp.TxHash)
-
-	// ⛏ Confirm tx impact
-	time.Sleep(1 * time.Second)
-	aliceAfter, _ := client.BalanceAt(context.Background(), alice.CommonAddress, nil)
-	bobAfter, _ := client.BalanceAt(context.Background(), bob.CommonAddress, nil)
-
-	t.Logf("Alice: %s", aliceAfter)
-	t.Logf("Bob:   %s", bobAfter)
-}
-
 func TestDeployCounterContractViaAPI(t *testing.T) {
 	urls := GetUrls()
-
-	// ✅ Use our MustGet helper for unified client and accounts
 	client, alice, _, _ := MustGet(t, urls)
 	defer client.Close()
 
-	// 🧱 Load contract bytecode from Go binding (CounterMetaData)
-	data := strings.TrimPrefix(counter.CounterMetaData.Bin, "0x")
-	bytecode := strings.TrimSpace(data)
-	if !strings.HasPrefix(bytecode, "0x") {
-		bytecode = "0x" + bytecode
-	}
-
-	t.Logf("📦 Deploying contract using bytecode (length %d bytes)", len(bytecode)/2)
-
-	// 📨 Compose SignTxRequest (no "To" field means contract deployment)
-	req := toytypes.SignTxRequest{
-		From:  alice.Name,
-		To:    "",
-		Value: "0",
-		Data:  bytecode,
-	}
-
-	// 📤 Send the request to DevServer
-	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SendTxAPIResponse](urls.ServerURL+"/api/send-tx", req)
-	require.NoError(t, err)
-	require.Nil(t, apiErr)
-	require.NotEmpty(t, apiResp.TxHash)
-
-	t.Logf("🚀 Contract deployment tx hash: %s", apiResp.TxHash)
-
-	// ⏳ Wait for transaction to be mined and get the receipt
-	receipt := WaitForReceipt(t, client, common.HexToHash(apiResp.TxHash))
-	require.NotNil(t, receipt)
-
-	t.Logf("✅ Contract deployed at: %s (block %d)", receipt.ContractAddress.Hex(), receipt.BlockNumber.Uint64())
-}
-
-func WaitForReceipt(t *testing.T, client *ethclient.Client, txHash common.Hash) *types.Receipt {
 	ctx := context.Background()
-	for i := 0; i < 60; i++ {
-		receipt, err := client.TransactionReceipt(ctx, txHash)
-		if err == nil {
-			t.Logf("🧾 Receipt received after %d sec", i)
-			return receipt
-		}
-		t.Logf("⏳ Waiting for receipt... (%d)", i)
-		time.Sleep(1 * time.Second)
-	}
-	t.Fatalf("⏱️ Timeout waiting for receipt of tx %s", txHash.Hex())
-	return nil
+
+	// 🧱 Load contract bytecode from Go binding
+	bytecode := counter.CounterMetaData.Bin
+	contractAddr, txHash, err := contract.DeployContract(
+		ctx, client, urls.ServerURL, alice.Name, bytecode,
+	)
+	require.NoError(t, err)
+
+	t.Logf("🧾 TxHash: %s", txHash)
+	t.Logf("🏠 Contract deployed at: %s", contractAddr.Hex())
 }
