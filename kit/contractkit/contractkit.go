@@ -68,9 +68,6 @@ func RunBind(compileOpts CompileOptions, bindOpts BindOptions) error {
 	abiFile := filepath.Join(contractDir, contractName+".abi")
 	binFile := filepath.Join(contractDir, contractName+".bin")
 
-	fmt.Println("ABI file:", abiFile)
-	fmt.Println("BIN file:", binFile)
-
 	// 🧬 Run abigen
 	cmd := exec.Command(
 		"abigen",
