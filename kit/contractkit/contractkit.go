@@ -50,3 +50,30 @@ func CompileContract(opts CompileOptions) error {
 	fmt.Printf("✅ Compiled %s → %s\n", opts.SolContractPath, outDir)
 	return nil
 }
+
+type BindOptions struct {
+	ABIPath     string // Path to .abi file
+	BinPath     string // Path to .bin file
+	PackageName string // Name of Go package
+	OutputPath  string // Where to write the .go file
+}
+
+func GenerateGoBindings(opts BindOptions) error {
+	cmd := exec.Command(
+		"go", "run", "./cmd/abigen", // 🧠 we’re assuming local go-ethereum clone
+		"--abi", opts.ABIPath,
+		"--bin", opts.BinPath,
+		"--pkg", opts.PackageName,
+		"--out", opts.OutputPath,
+	)
+
+	cmd.Dir = "/Users/iyadi/github/ethereum/go-ethereum" // 👈 make this configurable if needed
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("abigen failed: %w\nOutput: %s", err, string(out))
+	}
+
+	fmt.Printf("✅ abigen success → %s\n", opts.OutputPath)
+	return nil
+}
