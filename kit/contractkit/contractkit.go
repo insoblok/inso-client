@@ -50,3 +50,21 @@ func CompileContract(opts CompileOptions) error {
 	fmt.Printf("✅ Compiled %s → %s\n", opts.SolContractPath, outDir)
 	return nil
 }
+
+type BindOptions struct {
+	SolContractPath string
+	OutBaseDir      string
+}
+
+func BindContract(opts BindOptions) error {
+	return nil
+}
+
+type DeployOptions struct {
+	SolContractPath string
+	OutBaseDir      string
+}
+
+func DeployContract(opts DeployOptions) error {
+	return nil
+}

@@ -23,23 +23,50 @@ func main() {
 
 	mode := Mode(os.Args[1])
 
+	compileOptions := contractkit.CompileOptions{
+		SolContractPath: "/Users/iyadi/playground/eth-toy-client/eth-toy-client/sol/contracts/Counter.sol",
+		OutBaseDir:      "/Users/iyadi/playground/eth-toy-client/eth-toy-client/sol/out",
+		Clean:           true,
+	}
+
+	bindOptions := contractkit.BindOptions{
+		SolContractPath: "",
+		OutBaseDir:      "",
+	}
+
+	deployOptions := contractkit.DeployOptions{
+		SolContractPath: "",
+		OutBaseDir:      "",
+	}
+
 	switch mode {
 	case ModeCompile:
-		options := contractkit.CompileOptions{
-			SolContractPath: "/Users/iyadi/playground/eth-toy-client/eth-toy-client/sol/contracts/Counter.sol",
-			OutBaseDir:      "/Users/iyadi/playground/eth-toy-client/eth-toy-client/sol/out",
-			Clean:           true,
-		}
-		err := contractkit.CompileContract(options)
+		fmt.Println("🛠️ Running in COMPILE mode")
+		err := contractkit.CompileContract(compileOptions)
 		if err != nil {
 			panic(err)
 		}
-
-		fmt.Println("🛠️ Running in COMPILE mode")
 	case ModeBind:
 		fmt.Println("🔧 Running in BIND mode")
+		err := contractkit.CompileContract(compileOptions)
+		if err != nil {
+			panic(err)
+		}
+		err = contractkit.BindContract(bindOptions)
+		if err != nil {
+			panic(err)
+		}
 	case ModeDeploy:
 		fmt.Println("🚀 Running in DEPLOY mode")
+		err := contractkit.CompileContract(compileOptions)
+		if err != nil {
+			panic(err)
+		}
+		err = contractkit.BindContract(bindOptions)
+		if err != nil {
+			panic(err)
+		}
+		err = contractkit.DeployContract(deployOptions)
 	default:
 		fmt.Printf("❌ Unknown mode: %s\n", mode)
 		os.Exit(1)
