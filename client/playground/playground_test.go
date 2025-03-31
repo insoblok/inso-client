@@ -413,7 +413,7 @@ func TestDeployCounterContractViaAPI(t *testing.T) {
 	// 📨 Compose SignTxRequest (no "To" field means contract deployment)
 	req := toytypes.SignTxRequest{
 		From:  alice.Name,
-		To:    "", // No recipient for contract deployment
+		To:    "",
 		Value: "0",
 		Data:  bytecode,
 	}
