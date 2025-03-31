@@ -17,6 +17,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"strings"
 )
 
 type accountResponse struct {
@@ -270,7 +271,7 @@ func handleSignTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 			return
 		}
 
-		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, to.Address, val, rpcPort)
+		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, &to.Address, val, rpcPort, nil)
 		if err != nil {
 			log.Printf("❌ Signing failed: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())
@@ -288,7 +289,6 @@ func handleSignTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 		httpapi.WriteOK[toytypes.SignTxAPIResponse](w, resp)
 	}
 }
-
 func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -304,8 +304,6 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 			return
 		}
 
-		log.Printf("📨 /send-tx: from=%s → to=%s | value=%s", req.From, req.To, req.Value)
-
 		from, ok := (*accounts)[req.From]
 		if !ok {
 			log.Printf("⚠️ Sender not found: %s", req.From)
@@ -313,21 +311,48 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 			return
 		}
 
-		to, ok := (*accounts)[req.To]
-		if !ok {
-			log.Printf("⚠️ Recipient not found: %s", req.To)
-			httpapi.WriteError(w, http.StatusBadRequest, "InvalidAccount", fmt.Sprintf("Recipient '%s' not found", req.To))
-			return
-		}
-
 		val := new(big.Int)
-		if _, ok := val.SetString(req.Value, 10); !ok {
+		if req.Value == "" {
+			val.SetInt64(0)
+		} else if _, ok := val.SetString(req.Value, 10); !ok {
 			log.Printf("❌ Invalid value format: %s", req.Value)
 			httpapi.WriteError(w, http.StatusBadRequest, "InvalidValue", "Invalid value format")
 			return
 		}
 
-		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, to.Address, val, rpcPort)
+		var (
+			toAddr *common.Address
+			data   []byte
+		)
+
+		if req.To == "" {
+			// 🚀 Contract Deployment
+			if req.Data == "" {
+				httpapi.WriteError(w, http.StatusBadRequest, "MissingData", "Contract deployment requires 'data' field")
+				return
+			}
+			log.Printf("📨 /send-tx: deploying contract from=%s", req.From)
+
+			dataBytes, err := hex.DecodeString(strings.TrimPrefix(req.Data, "0x"))
+			if err != nil {
+				httpapi.WriteError(w, http.StatusBadRequest, "InvalidData", "Failed to decode contract bytecode")
+				return
+			}
+			data = dataBytes
+		} else {
+			// 🔁 Normal Transfer
+			toAccount, ok := (*accounts)[req.To]
+			if !ok {
+				log.Printf("⚠️ Recipient not found: %s", req.To)
+				httpapi.WriteError(w, http.StatusBadRequest, "InvalidAccount", fmt.Sprintf("Recipient '%s' not found", req.To))
+				return
+			}
+			addr := toAccount.Address
+			toAddr = &addr
+			log.Printf("📨 /send-tx: from=%s → to=%s | value=%s", req.From, req.To, req.Value)
+		}
+
+		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, toAddr, val, rpcPort, data)
 		if err != nil {
 			log.Printf("❌ Signing failed: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())
@@ -351,9 +376,8 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 
 		log.Printf("✅ Sent TX: %s", tx.Hash().Hex())
 
-		resp := &toytypes.SendTxAPIResponse{
+		httpapi.WriteOK[toytypes.SendTxAPIResponse](w, &toytypes.SendTxAPIResponse{
 			TxHash: tx.Hash().Hex(),
-		}
-		httpapi.WriteOK[toytypes.SendTxAPIResponse](w, resp)
+		})
 	}
 }

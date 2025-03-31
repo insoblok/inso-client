@@ -150,7 +150,14 @@ type SendTxResponse struct {
 	TxHash string `json:"txHash"`
 }
 
-func BuildAndSignTx(privKey *ecdsa.PrivateKey, from common.Address, to common.Address, value *big.Int, rpcPort string) (*types.Transaction, *types.Transaction, error) {
+func BuildAndSignTx(
+	privKey *ecdsa.PrivateKey,
+	from common.Address,
+	to *common.Address, // ✅ nil means contract deployment
+	value *big.Int,
+	rpcPort string,
+	data []byte, // ✅ Optional data (contract bytecode or calldata)
+) (*types.Transaction, *types.Transaction, error) {
 	client, err := ethclient.Dial("http://localhost:" + rpcPort)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to dev node: %w", err)
@@ -174,9 +181,10 @@ func BuildAndSignTx(privKey *ecdsa.PrivateKey, from common.Address, to common.Ad
 		Nonce:     nonce,
 		GasTipCap: big.NewInt(1),
 		GasFeeCap: big.NewInt(1_000_000_000), // 1 gwei
-		Gas:       21_000,
-		To:        &to,
+		Gas:       300_000,                   // ⛽ for deployment or interaction
+		To:        to,
 		Value:     value,
+		Data:      data, // 🧠 smart contract bytecode or calldata
 	})
 
 	signer := types.NewLondonSigner(chainID)

@@ -8,6 +8,7 @@ import (
 	"eth-toy-client/core/consts"
 	"eth-toy-client/core/httpapi"
 	toytypes "eth-toy-client/core/types"
+	"eth-toy-client/sol/counter"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -391,4 +392,55 @@ func TestSendTxViaDevServerAPI(t *testing.T) {
 
 	t.Logf("Alice: %s", aliceAfter)
 	t.Logf("Bob:   %s", bobAfter)
+}
+
+func TestDeployCounterContractViaAPI(t *testing.T) {
+	urls := GetUrls()
+	client, alice, _, _ := MustGet(t, urls)
+	defer client.Close()
+
+	data := strings.TrimPrefix(counter.CounterMetaData.Bin, "0x")
+
+	bytecode := strings.TrimSpace(data)
+	if !strings.HasPrefix(bytecode, "0x") {
+		bytecode = "0x" + bytecode
+	}
+
+	// 📨 Compose SignTxRequest (no "To" field for contract deployment)
+	req := toytypes.SignTxRequest{
+		From:  alice.Name,
+		To:    "",
+		Value: "0",
+		Data:  bytecode,
+	}
+
+	// 📤 Send via /api/send-tx
+	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SendTxAPIResponse](urls.ServerURL+"/api/send-tx", req)
+	require.NoError(t, err)
+	require.Nil(t, apiErr)
+	require.NotEmpty(t, apiResp.TxHash)
+
+	t.Logf("🚀 Contract deployment tx hash: %s", apiResp.TxHash)
+
+	// 🕰️ Wait to be mined
+	time.Sleep(1 * time.Second)
+
+	// 🔍 Query the receipt to get contract address
+	receipt := WaitForReceipt(t, client, common.HexToHash(apiResp.TxHash))
+	require.NotNil(t, receipt)
+	t.Logf("✅ Contract deployed at: %s", receipt.ContractAddress.Hex())
+
+}
+
+func WaitForReceipt(t *testing.T, client *ethclient.Client, txHash common.Hash) *types.Receipt {
+	ctx := context.Background()
+	for i := 0; i < 60; i++ {
+		receipt, err := client.TransactionReceipt(ctx, txHash)
+		if err == nil {
+			return receipt
+		}
+		time.Sleep(1 * time.Second)
+	}
+	t.Fatalf("⏱️ Timeout waiting for receipt of tx %s", txHash.Hex())
+	return nil
 }
