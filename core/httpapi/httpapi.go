@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -41,4 +42,18 @@ func WriteOK[T any](w http.ResponseWriter, data *T) {
 func WriteError(w http.ResponseWriter, status int, code, message string) {
 	err := &APIError{Code: code, Message: message}
 	WriteJSON[any](w, status, nil, err)
+}
+
+func ParseAPIResponse[T any](resp *http.Response) (*T, *APIError, error) {
+	defer resp.Body.Close()
+
+	var parsed APIResponse[T]
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, nil, fmt.Errorf("failed to decode API response: %w", err)
+	}
+
+	if parsed.Error != nil {
+		return nil, parsed.Error, nil
+	}
+	return parsed.Data, nil, nil
 }
