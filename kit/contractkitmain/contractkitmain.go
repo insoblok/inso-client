@@ -30,43 +30,30 @@ func main() {
 	}
 
 	bindOptions := contractkit.BindOptions{
-		SolContractPath: "",
-		OutBaseDir:      "",
+		PackageName: "counter",
+		OutFile:     "sol/out/Counter/counter.go",
 	}
 
-	deployOptions := contractkit.DeployOptions{
-		SolContractPath: "",
-		OutBaseDir:      "",
-	}
+	//deployOptions := contractkit.DeployOptions{
+	//	SolContractPath: "",
+	//	OutBaseDir:      "",
+	//}
 
 	switch mode {
 	case ModeCompile:
 		fmt.Println("🛠️ Running in COMPILE mode")
-		err := contractkit.CompileContract(compileOptions)
+		_, err := contractkit.CompileContract(compileOptions)
 		if err != nil {
 			panic(err)
 		}
 	case ModeBind:
 		fmt.Println("🔧 Running in BIND mode")
-		err := contractkit.CompileContract(compileOptions)
-		if err != nil {
-			panic(err)
-		}
-		err = contractkit.BindContract(bindOptions)
+		err := contractkit.RunBind(compileOptions, bindOptions)
 		if err != nil {
 			panic(err)
 		}
 	case ModeDeploy:
 		fmt.Println("🚀 Running in DEPLOY mode")
-		err := contractkit.CompileContract(compileOptions)
-		if err != nil {
-			panic(err)
-		}
-		err = contractkit.BindContract(bindOptions)
-		if err != nil {
-			panic(err)
-		}
-		err = contractkit.DeployContract(deployOptions)
 	default:
 		fmt.Printf("❌ Unknown mode: %s\n", mode)
 		os.Exit(1)
