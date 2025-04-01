@@ -41,6 +41,7 @@ func SetupRoutes(reg *contract.ContractRegistry, devAccount common.Address, rpcP
 	mux.HandleFunc("/api/send-tx", handleSendTxAPI(rpcPort, accounts))
 	mux.HandleFunc("/api/register-alias", handleRegisterAlias(reg))
 	mux.HandleFunc("/api/contracts", handleGetContracts(reg))
+	mux.HandleFunc("/api/contracts/", handleGetContractByAlias(reg))
 
 	return mux
 }
@@ -446,5 +447,23 @@ func handleGetContracts(reg *contract.ContractRegistry) http.HandlerFunc {
 		}
 
 		httpapi.WriteOK(w, &summaries)
+	}
+}
+
+func handleGetContractByAlias(reg *contract.ContractRegistry) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		alias := strings.TrimPrefix(r.URL.Path, "/api/contracts/")
+		if alias == "" {
+			httpapi.WriteError(w, 400, "MissingAlias", "Alias is required in the path")
+			return
+		}
+
+		meta, ok := reg.Get(alias)
+		if !ok {
+			httpapi.WriteError(w, 404, "NotFound", fmt.Sprintf("Alias '%s' not found", alias))
+			return
+		}
+
+		httpapi.WriteOK(w, &meta)
 	}
 }

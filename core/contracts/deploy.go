@@ -98,9 +98,11 @@ func NewRegistry() *ContractRegistry {
 func (r *ContractRegistry) Add(meta DeployedContractMetaJSON) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, exists := r.entries[meta.Alias]; exists {
+
+	if _, exists := r.entries[meta.Alias]; exists && !meta.Overwrite {
 		return fmt.Errorf("alias already exists: %s", meta.Alias)
 	}
+
 	r.entries[meta.Alias] = meta
 	return nil
 }
@@ -116,6 +118,13 @@ func (r *ContractRegistry) All() []DeployedContractMetaJSON {
 	return entries
 }
 
+func (r *ContractRegistry) Get(alias string) (DeployedContractMetaJSON, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	meta, ok := r.entries[alias]
+	return meta, ok
+}
+
 type AliasDeployResponse struct {
 	Alias   string `json:"alias"`
 	Address string `json:"address"`
@@ -129,5 +138,6 @@ type DeployedContractMetaJSON struct {
 	ABI       string `json:"abi"`
 	Bytecode  string `json:"bytecode"`
 	Timestamp int64  `json:"timestamp"`
-	Owner     string `json:"owner"` // ← Add here too
+	Owner     string `json:"owner"`
+	Overwrite bool   `json:"overwrite"`
 }
