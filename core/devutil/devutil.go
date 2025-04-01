@@ -12,9 +12,10 @@ import (
 )
 
 type DevContext struct {
-	Client   *ethclient.Client
-	URLs     Urls
-	Accounts map[string]ClientTestAccount
+	Client    *ethclient.Client
+	ServerURL string
+	FromAlias string
+	CleanupFn func() // optional if you want to close things later
 }
 
 type ClientTestAccount struct {
@@ -63,34 +64,28 @@ func GetInfoResponse(urls Urls) (*InfoResponse, error) {
 	return &info, nil
 }
 
-// GetDevContext connects to the DevServer and returns RPC + accounts
-func GetDevContext(ctx context.Context) (*DevContext, error) {
-	urls := GetUrls()
+func GetDevContext(fromAlias string) (*DevContext, error) {
+	urls := GetUrls() // local dev server info
 
-	info, err := GetInfo(ctx, urls.InfoURL)
+	// Fetch RPC URL (used to connect ethclient)
+	info, err := GetInfoResponse(urls)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch /info: %w", err)
+		return nil, fmt.Errorf("failed to fetch info from devserver: %w", err)
 	}
 
-	client, err := ethclient.DialContext(ctx, info.RPCURL)
+	// Connect to ethclient (RPC endpoint)
+	client, err := ethclient.Dial(info.RPCURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to RPC: %w", err)
-	}
-
-	accounts, err := GetAccounts(ctx, urls.AccountsURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch /accounts: %w", err)
-	}
-
-	// Parse addresses
-	for i := range accounts {
-		accounts[i].CommonAddress = common.HexToAddress(accounts[i].Address)
+		return nil, fmt.Errorf("failed to connect to ethclient at %s: %w", info.RPCURL, err)
 	}
 
 	return &DevContext{
-		Client:   client,
-		URLs:     urls,
-		Accounts: makeAliasMap(accounts),
+		Client:    client,
+		ServerURL: urls.ServerURL,
+		FromAlias: fromAlias,
+		CleanupFn: func() {
+			client.Close()
+		},
 	}, nil
 }
 
