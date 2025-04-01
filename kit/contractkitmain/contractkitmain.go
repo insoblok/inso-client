@@ -23,8 +23,8 @@ func main() {
 	}
 
 	bindOptions := contractkit.BindOptions{
-		PackageName: "counter",
-		OutFile:     "sol/out/Counter/counter.go",
+		PackageName: "",
+		OutFile:     "",
 	}
 
 	//// Compiler Options

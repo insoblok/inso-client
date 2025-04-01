@@ -42,20 +42,15 @@ type DeployOptions struct {
 
 // BuildResult represents outputs of the compile step
 type BuildResult struct {
-	BuildDir string // Relative to OutBaseDir
-	ABIPath  string // Relative to BuildDir
-	BINPath  string // Relative to BuildDir
-	Contract string // Contract name (no extension)
+	BuildDir     string
+	ContractName string
 }
 
-// CompileContract compiles the contract and returns build metadata
 func CompileContract(opts CompileOptions) (*BuildResult, error) {
-	// ✅ Validate contract path
 	if _, err := os.Stat(opts.SolContractPath); os.IsNotExist(err) {
 		return nil, logutil.ErrorErrf("sol contract file does not exist: %s", opts.SolContractPath)
 	}
 
-	// 📁 Ensure output base dir exists
 	if _, err := os.Stat(opts.OutBaseDir); os.IsNotExist(err) {
 		logutil.Infof("Output base dir not found — creating: %s", opts.OutBaseDir)
 		if err := os.MkdirAll(opts.OutBaseDir, 0o755); err != nil {
@@ -79,18 +74,16 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 		_ = os.RemoveAll(buildDir)
 	}
 
-	// ✅ Create output dir if needed
 	if err := os.MkdirAll(buildDir, 0o755); err != nil {
 		return nil, logutil.ErrorErrf("failed to create build dir: %w", err)
 	}
 
-	// ✅ Run solc
 	cmd := exec.Command(
 		"solc",
 		"--abi",
 		"--bin",
-		"--overwrite",
-		"-o", buildDir,
+		"-o",
+		buildDir,
 		opts.SolContractPath,
 	)
 	out, err := cmd.CombinedOutput()
@@ -101,10 +94,8 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 	logutil.Infof("✅ Compiled %s → %s", opts.SolContractPath, buildDir)
 
 	return &BuildResult{
-		BuildDir: buildDir,
-		ABIPath:  filepath.Base(contractName + ".abi"),
-		BINPath:  filepath.Base(contractName + ".bin"),
-		Contract: contractName,
+		BuildDir:     buildDir,
+		ContractName: contractName,
 	}, nil
 }
 
@@ -114,18 +105,21 @@ func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, er
 		return nil, logutil.ErrorErrf("compilation failed before binding: %w", err)
 	}
 
-	abiFile := filepath.Join(result.BuildDir, result.ABIPath)
-	binFile := filepath.Join(result.BuildDir, result.BINPath)
+	abiFile := filepath.Join(result.BuildDir, result.ContractName+".abi")
+	binFile := filepath.Join(result.BuildDir, result.ContractName+".bin")
+	goFile := filepath.Join(result.BuildDir, strings.ToLower(result.ContractName)+".go")
+	packageName := strings.ToLower(result.ContractName)
 
 	logutil.Infof("ABI file: %s", abiFile)
 	logutil.Infof("BIN file: %s", binFile)
+	logutil.Infof("Go file: %s", goFile)
 
 	cmd := exec.Command(
 		"abigen",
 		"--abi", abiFile,
 		"--bin", binFile,
-		"--pkg", bindOpts.PackageName,
-		"--out", bindOpts.OutFile,
+		"--pkg", packageName,
+		"--out", goFile,
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -139,27 +133,23 @@ func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, er
 func RunDeploy(opts DeployOptions, compileOpts CompileOptions, bindOpts BindOptions) error {
 	logutil.Infof("🚀 Deploying contract from alias: %s", opts.FromAlias)
 
-	// 🧠 Setup dev context
 	devCtx, err := devutil.GetDevContext(opts.FromAlias)
 	if err != nil {
 		return logutil.ErrorErrf("failed to setup dev context: %w", err)
 	}
 	defer devCtx.Client.Close()
 
-	// ⚙️ Compile first
 	result, err := RunBind(compileOpts, bindOpts)
 	if err != nil {
 		return logutil.ErrorErrf("compilation failed: %w", err)
 	}
 
-	// 📦 Read bytecode
-	binPath := filepath.Join(result.BuildDir, result.BINPath)
+	binPath := filepath.Join(result.BuildDir, result.ContractName+".bin")
 	bytecode, err := os.ReadFile(binPath)
 	if err != nil {
 		return logutil.ErrorErrf("failed to read bin file: %w", err)
 	}
 
-	// 🧪 Deploy using core logic
 	addr, txHash, err := contract.DeployContract(context.Background(), devCtx.Client, devCtx.ServerURL, devCtx.FromAlias, "0x"+string(bytecode))
 	if err != nil {
 		return logutil.ErrorErrf("contract deployment failed: %w", err)
