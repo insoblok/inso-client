@@ -17,3 +17,8 @@ type SignTxRequest struct {
 type SendTxAPIResponse struct {
 	TxHash string `json:"txHash"`
 }
+
+type AliasRegisterResponse struct {
+	Status string `json:"status"`
+	Alias  string `json:"alias"`
+}

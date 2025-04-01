@@ -66,13 +66,11 @@ func GetInfoResponse(urls Urls) (*InfoResponse, error) {
 func GetDevContext(fromAlias string) (*DevContext, error) {
 	urls := GetUrls() // local dev server info
 
-	// Fetch RPC URL (used to connect ethclient)
 	info, err := GetInfoResponse(urls)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch info from devserver: %w", err)
 	}
 
-	// Connect to ethclient (RPC endpoint)
 	client, err := ethclient.Dial(info.RPCURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to ethclient at %s: %w", info.RPCURL, err)

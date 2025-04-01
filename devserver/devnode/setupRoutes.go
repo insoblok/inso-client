@@ -39,7 +39,7 @@ func SetupRoutes(reg *contract.ContractRegistry, devAccount common.Address, rpcP
 	mux.HandleFunc("/send-tx", handleSendTx(rpcPort, accounts))
 	mux.HandleFunc("/api/sign-tx", handleSignTx(rpcPort, accounts))
 	mux.HandleFunc("/api/send-tx", handleSendTxAPI(rpcPort, accounts))
-	mux.HandleFunc("/api/deploy", handleAliasDeploy(reg, rpcPort, accounts))
+	mux.HandleFunc("/api/register-alias", handleRegisterAlias(reg))
 
 	return mux
 }
@@ -400,80 +400,41 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 	}
 }
 
-// ✅ HTTP handler for alias-based deploy
-func handleAliasDeploy(reg *contract.ContractRegistry, rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
+func handleRegisterAlias(reg *contract.ContractRegistry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req contract.AliasDeployRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		var meta contract.DeployedContractMeta
+		if err := json.NewDecoder(r.Body).Decode(&meta); err != nil {
 			httpapi.WriteError(w, 400, "InvalidRequest", "Could not parse JSON")
 			return
 		}
 
-		logutil.Infof("🚀 Deploying contract with alias '%s' from '%s'", req.Alias, req.From)
-
-		from, ok := (*accounts)[req.From]
-		if !ok {
-			httpapi.WriteError(w, 400, "InvalidAccount", fmt.Sprintf("Sender '%s' not found", req.From))
+		// 🧪 Validate required fields
+		if meta.Alias == "" || meta.Address == (consts.Canonical.ZeroAddress) || meta.TxHash == (consts.Canonical.ZeroHash) {
+			httpapi.WriteError(w, 400, "MissingFields", "Alias, address, and txHash are required")
 			return
 		}
 
-		data, err := hexDecode(req.Bytecode)
-		if err != nil {
-			httpapi.WriteError(w, 400, "InvalidBytecode", "Could not decode bytecode")
-			return
+		// 🕒 Set timestamp if not provided
+		if meta.Timestamp == 0 {
+			meta.Timestamp = time.Now().Unix()
 		}
 
-		tx, signed, err := BuildAndSignTx(from.PrivKey, from.Address, nil, big.NewInt(0), rpcPort, data)
-		if err != nil {
-			httpapi.WriteError(w, 500, "SigningFailed", err.Error())
-			return
-		}
+		logutil.Infof("📦 Registering alias: %s → %s", meta.Alias, meta.Address.Hex())
 
-		client, _ := ethclient.Dial("http://localhost:" + rpcPort)
-		defer client.Close()
-
-		if err := client.SendTransaction(context.Background(), signed); err != nil {
-			httpapi.WriteError(w, 500, "SendTxFailed", err.Error())
-			return
-		}
-
-		logutil.Infof("✅ TX sent: %s", tx.Hash().Hex())
-
-		var receipt *types.Receipt
-		for i := 0; i < 60; i++ {
-			receipt, _ = client.TransactionReceipt(context.Background(), tx.Hash())
-			if receipt != nil {
-				break
-			}
-			time.Sleep(1 * time.Second)
-		}
-		if receipt == nil {
-			httpapi.WriteError(w, 500, "Timeout", "Transaction not mined")
-			return
-		}
-
-		meta := contract.ContractMeta{
-			Alias:     req.Alias,
-			Address:   receipt.ContractAddress,
-			TxHash:    tx.Hash(),
-			ABI:       req.ABI,
-			Timestamp: time.Now(),
-		}
-
-		if err := reg.Add(meta); err != nil {
+		if err := reg.Add(contract.ContractMeta{
+			Alias:     meta.Alias,
+			Address:   meta.Address,
+			TxHash:    meta.TxHash,
+			ABI:       meta.ABI,
+			Timestamp: time.Unix(meta.Timestamp, 0),
+		}); err != nil {
 			httpapi.WriteError(w, 400, "DuplicateAlias", err.Error())
 			return
 		}
 
-		httpapi.WriteOK(w, &contract.AliasDeployResponse{
-			Alias:   meta.Alias,
-			Address: meta.Address.Hex(),
-			TxHash:  meta.TxHash.Hex(),
+		httpapi.WriteOK(w, &toytypes.AliasRegisterResponse{
+			Status: "ok",
+			Alias:  meta.Alias,
 		})
 	}
-}
-
-// Utility for decoding hex with 0x prefix
-func hexDecode(hexStr string) ([]byte, error) {
-	return common.FromHex(hexStr), nil
 }

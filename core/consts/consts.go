@@ -1,6 +1,7 @@
 package consts
 
 import "math/big"
+import "github.com/ethereum/go-ethereum/common"
 
 // EthUnit holds common denominations of ETH
 type EthUnit struct {
@@ -65,4 +66,14 @@ var ETH2 = &EthAmounts{
 	One:                1e18, // 1 ETH
 	DefaultTransferWei: 1e16,
 	DefaultChainID:     1337,
+}
+
+type CanonicalValues struct {
+	ZeroAddress common.Address
+	ZeroHash    common.Hash
+}
+
+var Canonical = CanonicalValues{
+	ZeroAddress: common.Address{},
+	ZeroHash:    common.Hash{},
 }

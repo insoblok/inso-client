@@ -110,3 +110,13 @@ type AliasDeployResponse struct {
 	Address string `json:"address"`
 	TxHash  string `json:"txHash"`
 }
+
+// DeployedContractMeta represents metadata about a deployed contract
+type DeployedContractMeta struct {
+	Alias     string         `json:"alias"`     // Friendly name
+	Address   common.Address `json:"address"`   // On-chain address
+	TxHash    common.Hash    `json:"txHash"`    // Deployment transaction hash
+	ABI       string         `json:"abi"`       // ABI as JSON string
+	Bytecode  string         `json:"bytecode"`  // Deployed bytecode (or constructor bytecode)
+	Timestamp int64          `json:"timestamp"` // Optional: deployment time
+}

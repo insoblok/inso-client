@@ -4,7 +4,9 @@ import (
 	"context"
 	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/core/devutil"
+	"eth-toy-client/core/httpapi"
 	"eth-toy-client/core/logutil"
+	"github.com/ethereum/go-ethereum/common"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -156,4 +158,59 @@ func RunDeploy(compileOpts CompileOptions, opts DeployOptions) error {
 
 	logutil.Infof("✅ Contract deployed at: %s (tx: %s)", addr.Hex(), txHash)
 	return nil
+}
+
+func RunAliasDeploy(alias string, compileOpts CompileOptions, opts DeployOptions) error {
+	ctx := context.Background()
+
+	logutil.Infof("🚀 Deploying contract with alias: %s", alias)
+
+	result, err := RunBind(compileOpts)
+	if err != nil {
+		return logutil.ErrorErrf("compilation/binding failed: %w", err)
+	}
+
+	binPath := filepath.Join(result.BuildDir, result.ContractName+".bin")
+	bytecodeBytes, err := os.ReadFile(binPath)
+	if err != nil {
+		return logutil.ErrorErrf("failed to read compiled bytecode: %w", err)
+	}
+	bytecode := strings.TrimSpace(string(bytecodeBytes))
+
+	dev, _ := devutil.GetDevContext(opts.FromAlias)
+
+	deployedAddr, txHash, err := contract.DeployContract(ctx, dev.Client, dev.ServerURL, dev.FromAlias, bytecode)
+	if err != nil {
+		return logutil.ErrorErrf("contract deployment failed: %w", err)
+	}
+
+	logutil.Infof("✅ Contract deployed at: %s (tx: %s)", deployedAddr.Hex(), txHash)
+
+	meta := contract.DeployedContractMeta{
+		Alias:    alias,
+		Address:  deployedAddr,
+		TxHash:   common.HexToHash(txHash),
+		ABI:      stringOrEmpty(binPath),
+		Bytecode: bytecode,
+	}
+
+	_, apiErr, err := httpapi.PostWithAPIResponse[any](dev.ServerURL+"/api/register-alias", meta)
+	if err != nil {
+		return logutil.ErrorErrf("http error while registering alias: %w", err)
+	}
+	if apiErr != nil {
+		return logutil.ErrorErrf("api error: %s — %s", apiErr.Code, apiErr.Message)
+	}
+
+	logutil.Infof("📇 Registered contract alias: %s", alias)
+	return nil
+}
+
+// Helper to read file contents (or return empty string)
+func stringOrEmpty(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
