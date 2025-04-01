@@ -105,6 +105,17 @@ func (r *ContractRegistry) Add(meta DeployedContractMetaJSON) error {
 	return nil
 }
 
+func (r *ContractRegistry) All() []DeployedContractMetaJSON {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	entries := make([]DeployedContractMetaJSON, 0, len(r.entries))
+	for _, meta := range r.entries {
+		entries = append(entries, meta)
+	}
+	return entries
+}
+
 type AliasDeployResponse struct {
 	Alias   string `json:"alias"`
 	Address string `json:"address"`

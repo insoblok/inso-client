@@ -40,6 +40,7 @@ func SetupRoutes(reg *contract.ContractRegistry, devAccount common.Address, rpcP
 	mux.HandleFunc("/api/sign-tx", handleSignTx(rpcPort, accounts))
 	mux.HandleFunc("/api/send-tx", handleSendTxAPI(rpcPort, accounts))
 	mux.HandleFunc("/api/register-alias", handleRegisterAlias(reg))
+	mux.HandleFunc("/api/contracts", handleGetContracts(reg))
 
 	return mux
 }
@@ -430,5 +431,20 @@ func handleRegisterAlias(reg *contract.ContractRegistry) http.HandlerFunc {
 			Status: "ok",
 			Alias:  meta.Alias,
 		})
+	}
+}
+
+func handleGetContracts(reg *contract.ContractRegistry) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		all := reg.All()
+		summaries := []contract.DeployedContractMetaJSON{}
+
+		for _, entry := range all {
+			entry.ABI = ""      // Strip heavy fields
+			entry.Bytecode = "" // Keep response lightweight
+			summaries = append(summaries, entry)
+		}
+
+		httpapi.WriteOK(w, &summaries)
 	}
 }
