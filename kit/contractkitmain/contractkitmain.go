@@ -43,7 +43,7 @@ func main() {
 	// Bind Options
 	pkg := bindOptions.PackageName
 	bindOut := bindOptions.OutFile
-	alias := "alison"
+	alias := "alice"
 
 	switch mode {
 	case contractkit.ModeCompile:
@@ -59,7 +59,6 @@ func main() {
 			panic(err)
 		}
 	case contractkit.ModeDeploy:
-	case "deploy":
 		logutil.Infof("🚀 Running in DEPLOY mode")
 		compileOpts := contractkit.CompileOptions{
 			SolContractPath: solPath,
