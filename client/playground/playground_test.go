@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"eth-toy-client/core/consts"
 	contract "eth-toy-client/core/contracts"
+	"eth-toy-client/core/devutil"
 	"eth-toy-client/core/httpapi"
 	toytypes "eth-toy-client/core/types"
 	"eth-toy-client/sol/counter"
@@ -25,34 +26,7 @@ import (
 	"time"
 )
 
-type InfoResponse struct {
-	RPCURL        string `json:"rpcUrl"`
-	AccountsCount int    `json:"accountsCount"`
-}
-
-type Urls struct {
-	ServerURL   string
-	InfoURL     string
-	AccountsURL string
-}
-
-type ClientTestAccount struct {
-	Name          string         `json:"name"`
-	Address       string         `json:"address"`
-	PrivateKey    string         `json:"privateKey"`
-	CommonAddress common.Address `json:"-"`
-}
-
-func GetUrls() Urls {
-	base := "http://localhost:8575"
-	return Urls{
-		ServerURL:   base,
-		InfoURL:     base + "/info",
-		AccountsURL: base + "/accounts",
-	}
-}
-
-func GetInfoResponse(t *testing.T, urls Urls) InfoResponse {
+func GetInfoResponse(t *testing.T, urls devutil.Urls) devutil.InfoResponse {
 	resp, err := http.Get(urls.InfoURL)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -60,23 +34,23 @@ func GetInfoResponse(t *testing.T, urls Urls) InfoResponse {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	var info InfoResponse
+	var info devutil.InfoResponse
 	err = json.Unmarshal(body, &info)
 	require.NoError(t, err)
 	return info
 }
 
-func GetAccounts(t *testing.T, urls Urls) map[string]ClientTestAccount {
+func GetAccounts(t *testing.T, urls devutil.Urls) map[string]devutil.ClientTestAccount {
 	resp, err := http.Get(urls.AccountsURL)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	var accounts []ClientTestAccount
+	var accounts []devutil.ClientTestAccount
 
 	err = json.NewDecoder(resp.Body).Decode(&accounts)
 	require.NoError(t, err)
 
-	accountsMap := make(map[string]ClientTestAccount)
+	accountsMap := make(map[string]devutil.ClientTestAccount)
 	for _, acc := range accounts {
 		acc.CommonAddress = common.HexToAddress(acc.Address)
 		accountsMap[acc.Name] = acc
@@ -84,7 +58,7 @@ func GetAccounts(t *testing.T, urls Urls) map[string]ClientTestAccount {
 	return accountsMap
 }
 
-func MustGet(t *testing.T, urls Urls) (*ethclient.Client, ClientTestAccount, ClientTestAccount, map[string]ClientTestAccount) {
+func MustGet(t *testing.T, urls devutil.Urls) (*ethclient.Client, devutil.ClientTestAccount, devutil.ClientTestAccount, map[string]devutil.ClientTestAccount) {
 	accounts := GetAccounts(t, urls)
 	require.Len(t, accounts, 10, "Expected 10 test accounts")
 
@@ -100,8 +74,8 @@ func MustGet(t *testing.T, urls Urls) (*ethclient.Client, ClientTestAccount, Cli
 
 }
 
-func AliceSignAndSendTx(t *testing.T) (*ethclient.Client, *types.Transaction, ClientTestAccount, ClientTestAccount, *big.Int, *big.Int) {
-	client, alice, bob, _ := MustGet(t, GetUrls())
+func AliceSignAndSendTx(t *testing.T) (*ethclient.Client, *types.Transaction, devutil.ClientTestAccount, devutil.ClientTestAccount, *big.Int, *big.Int) {
+	client, alice, bob, _ := MustGet(t, devutil.GetUrls())
 
 	aliceBefore, _ := client.BalanceAt(context.Background(), alice.CommonAddress, nil)
 	bobBefore, _ := client.BalanceAt(context.Background(), bob.CommonAddress, nil)
@@ -128,7 +102,7 @@ func AliceSignAndSendTx(t *testing.T) (*ethclient.Client, *types.Transaction, Cl
 //////////////////////////////////////////////////////////////////
 
 func TestPlaygroundInfo(t *testing.T) {
-	info := GetInfoResponse(t, GetUrls())
+	info := GetInfoResponse(t, devutil.GetUrls())
 
 	t.Logf("ℹ️  Test server info:")
 	t.Logf("   🔗 RPC URL: %s", info.RPCURL)
@@ -139,7 +113,7 @@ func TestPlaygroundInfo(t *testing.T) {
 
 func TestPlaygroundAccounts(t *testing.T) {
 
-	accounts := GetAccounts(t, GetUrls())
+	accounts := GetAccounts(t, devutil.GetUrls())
 	require.Len(t, accounts, 10, "Expected 10 test accounts")
 
 	alice, ok := accounts["alice"]
@@ -151,7 +125,7 @@ func TestPlaygroundAccounts(t *testing.T) {
 }
 
 func TestSignedTxFromAliceToBob(t *testing.T) {
-	client, alice, bob, _ := MustGet(t, GetUrls())
+	client, alice, bob, _ := MustGet(t, devutil.GetUrls())
 	defer client.Close()
 
 	ctx := context.Background()
@@ -275,7 +249,7 @@ func TestRecoverPublicKeyFromSignature(t *testing.T) {
 }
 
 func TestSignTxFromAlice(t *testing.T) {
-	urls := GetUrls()
+	urls := devutil.GetUrls()
 	accountMap := GetAccounts(t, urls)
 
 	alice := accountMap["alice"]
@@ -304,7 +278,7 @@ func TestSignTxFromAlice(t *testing.T) {
 }
 
 func TestSendTxViaDevServer(t *testing.T) {
-	urls := GetUrls()
+	urls := devutil.GetUrls()
 	client, alice, bob, _ := MustGet(t, urls)
 	defer client.Close()
 
@@ -345,7 +319,7 @@ func TestSendTxViaDevServer(t *testing.T) {
 }
 
 func TestSignTxViaDevServerAPI(t *testing.T) {
-	urls := GetUrls()
+	urls := devutil.GetUrls()
 	client, alice, bob, _ := MustGet(t, urls)
 	defer client.Close()
 
@@ -366,7 +340,7 @@ func TestSignTxViaDevServerAPI(t *testing.T) {
 }
 
 func TestDeployCounterContractViaAPI(t *testing.T) {
-	urls := GetUrls()
+	urls := devutil.GetUrls()
 	client, alice, _, _ := MustGet(t, urls)
 	defer client.Close()
 
@@ -384,7 +358,7 @@ func TestDeployCounterContractViaAPI(t *testing.T) {
 }
 
 func TestDeployContract_InvalidBytecode(t *testing.T) {
-	urls := GetUrls()
+	urls := devutil.GetUrls()
 	client, alice, _, _ := MustGet(t, urls)
 	defer client.Close()
 	ctx := context.Background()
