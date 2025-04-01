@@ -35,9 +35,7 @@ type BindOptions struct {
 
 // DeployOptions holds runtime info for deployment
 type DeployOptions struct {
-	RPCURL    string // JSON-RPC endpoint
-	FromAlias string // Sender account alias (e.g., "alice")
-	ServerURL string // DevServer API endpoint (e.g., http://localhost:8575)
+	FromAlias string
 }
 
 // BuildResult represents outputs of the compile step
@@ -130,7 +128,7 @@ func RunBind(compileOpts CompileOptions) (*BuildResult, error) {
 	return result, nil
 }
 
-func RunDeploy(opts DeployOptions, compileOpts CompileOptions) error {
+func RunDeploy(compileOpts CompileOptions, opts DeployOptions) error {
 	logutil.Infof("🚀 Deploying contract from alias: %s", opts.FromAlias)
 
 	devCtx, err := devutil.GetDevContext(opts.FromAlias)

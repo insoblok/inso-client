@@ -22,9 +22,6 @@ func main() {
 		Clean:           true,
 	}
 
-	solPath := compileOptions.SolContractPath
-	outDir := compileOptions.OutBaseDir
-
 	alias := "alice"
 
 	switch mode {
@@ -42,16 +39,11 @@ func main() {
 		}
 	case contractkit.ModeDeploy:
 		logutil.Infof("🚀 Running in DEPLOY mode")
-		compileOpts := contractkit.CompileOptions{
-			SolContractPath: solPath,
-			OutBaseDir:      outDir,
-			Clean:           true,
-		}
 
 		deployOpts := contractkit.DeployOptions{
 			FromAlias: alias,
 		}
-		err := contractkit.RunDeploy(deployOpts, compileOpts)
+		err := contractkit.RunDeploy(compileOptions, deployOpts)
 		if err != nil {
 			logutil.Exitf("Deployment failed: %v", err)
 		}
