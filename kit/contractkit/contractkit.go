@@ -105,18 +105,17 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 	}, nil
 }
 
-// RunBind compiles and binds the contract
 func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, error) {
 	result, err := CompileContract(compileOpts)
 	if err != nil {
 		return nil, logutil.ErrorErrf("compilation failed before binding: %w", err)
 	}
 
-	abiFile := filepath.Join(compileOpts.OutBaseDir, result.BuildDir, result.ABIPath)
-	binFile := filepath.Join(compileOpts.OutBaseDir, result.BuildDir, result.BINPath)
+	abiFile := filepath.Join(result.BuildDir, result.ABIPath)
+	binFile := filepath.Join(result.BuildDir, result.BINPath)
 
-	logutil.Infof("ABI file: %s\n", abiFile)
-	logutil.Infof("BIN file: %s\n", binFile)
+	logutil.Infof("ABI file: %s", abiFile)
+	logutil.Infof("BIN file: %s", binFile)
 
 	cmd := exec.Command(
 		"abigen",
@@ -130,6 +129,6 @@ func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, er
 		return nil, logutil.ErrorErrf("abigen failed: %w\nOutput: %s", err, string(out))
 	}
 
-	logutil.Infof("✅ abigen: %s → %s\n", abiFile, bindOpts.OutFile)
+	logutil.Infof("✅ abigen: %s → %s", abiFile, bindOpts.OutFile)
 	return result, nil
 }
