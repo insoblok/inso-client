@@ -1,6 +1,9 @@
 package contractkit
 
 import (
+	"context"
+	contract "eth-toy-client/core/contracts"
+	"eth-toy-client/core/devutil"
 	"eth-toy-client/core/logutil"
 	"os"
 	"os/exec"
@@ -131,4 +134,50 @@ func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, er
 
 	logutil.Infof("✅ abigen: %s → %s", abiFile, bindOpts.OutFile)
 	return result, nil
+}
+
+func RunDeploy(
+	opts DeployOptions,
+	compileOpts CompileOptions,
+	bindOpts BindOptions,
+) error {
+	logutil.Infof("🔧 Running in DEPLOY mode")
+
+	// 🔌 Connect to devserver + node client
+	ctx := context.Background()
+	dev, err := devutil.GetDevContext(ctx)
+	if err != nil {
+		return logutil.ErrorErrf("failed to connect to dev environment: %w", err)
+	}
+	defer dev.Client.Close()
+
+	// 🧬 Compile + bind to get the bytecode
+	result, err := RunBind(compileOpts, bindOpts)
+	if err != nil {
+		return logutil.ErrorErrf("compile/bind failed: %w", err)
+	}
+
+	// 📄 Read bytecode from generated .bin file
+	binFile := filepath.Join(result.BuildDir, result.BINPath)
+	bytecodeBytes, err := os.ReadFile(binFile)
+	if err != nil {
+		return logutil.ErrorErrf("failed to read .bin file: %w", err)
+	}
+
+	bytecode := strings.TrimSpace(string(bytecodeBytes))
+	if !strings.HasPrefix(bytecode, "0x") {
+		bytecode = "0x" + bytecode
+	}
+
+	// 🚀 Deploy using the API
+	addr, txHash, err := contract.DeployContract(
+		ctx, dev.Client, dev.URLs.ServerURL, opts.FromAlias, bytecode,
+	)
+	if err != nil {
+		return logutil.ErrorErrf("contract deployment failed: %w", err)
+	}
+
+	logutil.Infof("🧾 TxHash: %s", txHash)
+	logutil.Infof("🏠 Contract deployed at: %s", addr.Hex())
+	return nil
 }
