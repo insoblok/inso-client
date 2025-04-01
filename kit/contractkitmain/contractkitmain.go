@@ -1,15 +1,17 @@
 package main
 
 import (
+	"eth-toy-client/core/logutil"
 	"eth-toy-client/kit/contractkit"
 	"fmt"
 	"os"
 )
 
 func main() {
+	logutil.Info("📣 super duper main started")
+
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: contractkitmain [compile|bind|deploy]")
-		os.Exit(1)
+		logutil.LogAndExit("Usage: contractkitmain [compile|bind|deploy]")
 	}
 
 	mode := contractkit.Mode(os.Args[1])

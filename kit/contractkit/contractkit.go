@@ -1,8 +1,7 @@
 package contractkit
 
 import (
-	"fmt"
-	"github.com/ethereum/go-ethereum/log"
+	"eth-toy-client/core/logutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,12 +47,26 @@ type BuildResult struct {
 
 // CompileContract compiles the contract and returns build metadata
 func CompileContract(opts CompileOptions) (*BuildResult, error) {
+	// ✅ Validate contract path
+	if _, err := os.Stat(opts.SolContractPath); os.IsNotExist(err) {
+		return nil, logutil.Errorf("sol contract file does not exist: %s", opts.SolContractPath)
+	}
+
+	// 📁 Ensure output base dir exists
+	if _, err := os.Stat(opts.OutBaseDir); os.IsNotExist(err) {
+		logutil.Info("Output base dir not found — creating", "path", opts.OutBaseDir)
+		if err := os.MkdirAll(opts.OutBaseDir, 0o755); err != nil {
+			return nil, logutil.Errorf("failed to create OutBaseDir: %w", err)
+		}
+		logutil.Info("✅ Created OutBaseDir", "path", opts.OutBaseDir)
+	}
+
 	contractName := strings.TrimSuffix(
 		filepath.Base(opts.SolContractPath),
 		filepath.Ext(opts.SolContractPath),
 	)
 
-	log.Info(
+	logutil.Info(
 		"Compiling contract",
 		"contract", contractName,
 		"solContractPath", opts.SolContractPath,
@@ -66,11 +79,12 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 		_ = os.RemoveAll(buildDir)
 	}
 
-	// Create output dir if not exists
+	// ✅ Create output dir if needed
 	if err := os.MkdirAll(buildDir, 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create build dir: %w", err)
+		return nil, logutil.Errorf("failed to create build dir: %w", err)
 	}
 
+	// ✅ Run solc
 	cmd := exec.Command(
 		"solc",
 		"--abi",
@@ -81,10 +95,10 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("solc failed: %w\nOutput: %s", err, string(out))
+		return nil, logutil.Errorf("solc failed: %w\nOutput: %s", err, string(out))
 	}
 
-	fmt.Printf("✅ Compiled %s → %s\n", opts.SolContractPath, buildDir)
+	logutil.Info("✅ Compiled %s → %s\n", opts.SolContractPath, buildDir)
 
 	return &BuildResult{
 		BuildDir: buildDir,
@@ -98,14 +112,14 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, error) {
 	result, err := CompileContract(compileOpts)
 	if err != nil {
-		return nil, fmt.Errorf("compilation failed before binding: %w", err)
+		return nil, logutil.Errorf("compilation failed before binding: %w", err)
 	}
 
 	abiFile := filepath.Join(compileOpts.OutBaseDir, result.BuildDir, result.ABIPath)
 	binFile := filepath.Join(compileOpts.OutBaseDir, result.BuildDir, result.BINPath)
 
-	fmt.Printf("ABI file: %s\n", abiFile)
-	fmt.Printf("BIN file: %s\n", binFile)
+	logutil.Info("ABI file: %s\n", abiFile)
+	logutil.Info("BIN file: %s\n", binFile)
 
 	cmd := exec.Command(
 		"abigen",
@@ -116,9 +130,9 @@ func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, er
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("abigen failed: %w\nOutput: %s", err, string(out))
+		return nil, logutil.Errorf("abigen failed: %w\nOutput: %s", err, string(out))
 	}
 
-	fmt.Printf("✅ abigen: %s → %s\n", abiFile, bindOpts.OutFile)
+	logutil.Info("✅ abigen: %s → %s\n", abiFile, bindOpts.OutFile)
 	return result, nil
 }
