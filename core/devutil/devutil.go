@@ -1,7 +1,6 @@
 package devutil
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -87,44 +86,4 @@ func GetDevContext(fromAlias string) (*DevContext, error) {
 			client.Close()
 		},
 	}, nil
-}
-
-func GetInfo(ctx context.Context, infoURL string) (*InfoResponse, error) {
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, infoURL, nil)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var info InfoResponse
-	body, _ := io.ReadAll(resp.Body)
-	if err := json.Unmarshal(body, &info); err != nil {
-		return nil, err
-	}
-	return &info, nil
-}
-
-func GetAccounts(ctx context.Context, url string) ([]ClientTestAccount, error) {
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var accounts []ClientTestAccount
-	body, _ := io.ReadAll(resp.Body)
-	if err := json.Unmarshal(body, &accounts); err != nil {
-		return nil, err
-	}
-	return accounts, nil
-}
-
-func makeAliasMap(accounts []ClientTestAccount) map[string]ClientTestAccount {
-	m := make(map[string]ClientTestAccount)
-	for _, acc := range accounts {
-		m[acc.Name] = acc
-	}
-	return m
 }
