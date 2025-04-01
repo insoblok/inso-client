@@ -402,14 +402,14 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 
 func handleRegisterAlias(reg *contract.ContractRegistry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var meta contract.DeployedContractMeta
+		var meta contract.DeployedContractMetaJSON
 		if err := json.NewDecoder(r.Body).Decode(&meta); err != nil {
 			httpapi.WriteError(w, 400, "InvalidRequest", "Could not parse JSON")
 			return
 		}
 
 		// 🧪 Validate required fields
-		if meta.Alias == "" || meta.Address == (consts.Canonical.ZeroAddress) || meta.TxHash == (consts.Canonical.ZeroHash) {
+		if meta.Alias == "" || meta.Address == "" || meta.TxHash == "" {
 			httpapi.WriteError(w, 400, "MissingFields", "Alias, address, and txHash are required")
 			return
 		}
@@ -419,15 +419,9 @@ func handleRegisterAlias(reg *contract.ContractRegistry) http.HandlerFunc {
 			meta.Timestamp = time.Now().Unix()
 		}
 
-		logutil.Infof("📦 Registering alias: %s → %s", meta.Alias, meta.Address.Hex())
+		logutil.Infof("📦 Registering alias: %s → %s", meta.Alias, meta.Address)
 
-		if err := reg.Add(contract.ContractMeta{
-			Alias:     meta.Alias,
-			Address:   meta.Address,
-			TxHash:    meta.TxHash,
-			ABI:       meta.ABI,
-			Timestamp: time.Unix(meta.Timestamp, 0),
-		}); err != nil {
+		if err := reg.Add(meta); err != nil {
 			httpapi.WriteError(w, 400, "DuplicateAlias", err.Error())
 			return
 		}

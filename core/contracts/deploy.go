@@ -86,16 +86,16 @@ type ContractMeta struct {
 
 type ContractRegistry struct {
 	mu      sync.RWMutex
-	entries map[string]ContractMeta
+	entries map[string]DeployedContractMetaJSON
 }
 
 func NewRegistry() *ContractRegistry {
 	return &ContractRegistry{
-		entries: make(map[string]ContractMeta),
+		entries: make(map[string]DeployedContractMetaJSON),
 	}
 }
 
-func (r *ContractRegistry) Add(meta ContractMeta) error {
+func (r *ContractRegistry) Add(meta DeployedContractMetaJSON) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, exists := r.entries[meta.Alias]; exists {
@@ -111,12 +111,12 @@ type AliasDeployResponse struct {
 	TxHash  string `json:"txHash"`
 }
 
-// DeployedContractMeta represents metadata about a deployed contract
-type DeployedContractMeta struct {
-	Alias     string         `json:"alias"`     // Friendly name
-	Address   common.Address `json:"address"`   // On-chain address
-	TxHash    common.Hash    `json:"txHash"`    // Deployment transaction hash
-	ABI       string         `json:"abi"`       // ABI as JSON string
-	Bytecode  string         `json:"bytecode"`  // Deployed bytecode (or constructor bytecode)
-	Timestamp int64          `json:"timestamp"` // Optional: deployment time
+type DeployedContractMetaJSON struct {
+	Alias     string `json:"alias"`
+	Address   string `json:"address"`
+	TxHash    string `json:"txHash"`
+	ABI       string `json:"abi"`
+	Bytecode  string `json:"bytecode"`
+	Timestamp int64  `json:"timestamp"`
+	Owner     string `json:"owner"` // ← Add here too
 }

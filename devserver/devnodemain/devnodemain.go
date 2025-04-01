@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/devserver/devnode"
 	"flag"
 	"fmt"
@@ -54,17 +55,15 @@ func main() {
 	testAccount := devnode.LoadTestAccounts()
 	fundedAccounts := devnode.FundTestAccounts(devAddr, rpcClient, testAccount)
 
-	// ✅ ✅ ✅ START HTTP SERVER
 	go func() {
 		log.Println("🌐 Supporting HTTP server listening at http://localhost:" + serverPort + "...")
 		err := http.ListenAndServe(
 			":"+serverPort,
-			devnode.SetupRoutes(devAddr, port, fundedAccounts))
+			devnode.SetupRoutes(contract.NewRegistry(), devAddr, port, fundedAccounts))
 		if err != nil {
 			log.Fatalf("❌ Failed to start HTTP server: %v", err)
 		}
 	}()
-	// ✅ ✅ ✅ END HTTP SERVER
 
 	log.Printf("📡 Dev node ready at http://localhost:%s — Press Ctrl+C to exit", port)
 	select {}

@@ -2,15 +2,16 @@ package contractkit
 
 import (
 	"context"
+	"encoding/hex"
 	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/core/devutil"
 	"eth-toy-client/core/httpapi"
 	"eth-toy-client/core/logutil"
-	"github.com/ethereum/go-ethereum/common"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Mode determines what task to run
@@ -161,40 +162,45 @@ func RunDeploy(compileOpts CompileOptions, opts DeployOptions) error {
 }
 
 func RunAliasDeploy(alias string, compileOpts CompileOptions, opts DeployOptions) error {
-	ctx := context.Background()
 
-	logutil.Infof("🚀 Deploying contract with alias: %s", alias)
+	logutil.Infof("🚀 Deploying contract from alias: %s", opts.FromAlias)
+
+	devCtx, err := devutil.GetDevContext(opts.FromAlias)
+	if err != nil {
+		return logutil.ErrorErrf("failed to setup dev context: %w", err)
+	}
+	defer devCtx.Client.Close()
 
 	result, err := RunBind(compileOpts)
 	if err != nil {
-		return logutil.ErrorErrf("compilation/binding failed: %w", err)
+		return logutil.ErrorErrf("compilation failed: %w", err)
 	}
 
 	binPath := filepath.Join(result.BuildDir, result.ContractName+".bin")
-	bytecodeBytes, err := os.ReadFile(binPath)
+	bytecode, err := os.ReadFile(binPath)
 	if err != nil {
-		return logutil.ErrorErrf("failed to read compiled bytecode: %w", err)
+		return logutil.ErrorErrf("failed to read bin file: %w", err)
 	}
-	bytecode := strings.TrimSpace(string(bytecodeBytes))
 
-	dev, _ := devutil.GetDevContext(opts.FromAlias)
-
-	deployedAddr, txHash, err := contract.DeployContract(ctx, dev.Client, dev.ServerURL, dev.FromAlias, bytecode)
+	addr, txHash, err := contract.DeployContract(context.Background(), devCtx.Client, devCtx.ServerURL, devCtx.FromAlias, "0x"+string(bytecode))
 	if err != nil {
 		return logutil.ErrorErrf("contract deployment failed: %w", err)
 	}
 
-	logutil.Infof("✅ Contract deployed at: %s (tx: %s)", deployedAddr.Hex(), txHash)
+	logutil.Infof("✅ Contract deployed at: %s (tx: %s)", addr.Hex(), txHash)
 
-	meta := contract.DeployedContractMeta{
-		Alias:    alias,
-		Address:  deployedAddr,
-		TxHash:   common.HexToHash(txHash),
-		ABI:      stringOrEmpty(binPath),
-		Bytecode: bytecode,
+	logutil.Infof("🚀 Register contract from alias: %s", alias)
+	meta := contract.DeployedContractMetaJSON{
+		Alias:     alias,
+		Address:   addr.Hex(),
+		TxHash:    txHash,
+		ABI:       stringOrEmpty(binPath),
+		Bytecode:  "0x" + hex.EncodeToString(bytecode),
+		Timestamp: time.Now().Unix(),
+		Owner:     opts.FromAlias,
 	}
 
-	_, apiErr, err := httpapi.PostWithAPIResponse[any](dev.ServerURL+"/api/register-alias", meta)
+	_, apiErr, err := httpapi.PostWithAPIResponse[any](devCtx.ServerURL+"/api/register-alias", meta)
 	if err != nil {
 		return logutil.ErrorErrf("http error while registering alias: %w", err)
 	}
