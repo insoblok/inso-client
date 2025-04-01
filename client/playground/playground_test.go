@@ -10,7 +10,7 @@ import (
 	"eth-toy-client/core/devutil"
 	"eth-toy-client/core/httpapi"
 	toytypes "eth-toy-client/core/types"
-	"eth-toy-client/sol/counter"
+	"eth-toy-client/sol/out/counter"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"

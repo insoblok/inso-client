@@ -147,7 +147,7 @@ func RunDeploy(opts DeployOptions, compileOpts CompileOptions, bindOpts BindOpti
 	defer devCtx.Client.Close()
 
 	// ⚙️ Compile first
-	result, err := CompileContract(compileOpts)
+	result, err := RunBind(compileOpts, bindOpts)
 	if err != nil {
 		return logutil.ErrorErrf("compilation failed: %w", err)
 	}
