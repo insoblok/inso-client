@@ -27,10 +27,23 @@ func main() {
 		OutFile:     "sol/out/Counter/counter.go",
 	}
 
-	//deployOptions := contractkit.DeployOptions{
-	//	SolContractPath: "",
-	//	OutBaseDir:      "",
-	//}
+	//// Compiler Options
+	//solPath := flag.String("sol", "", "Path to Solidity contract")
+	//outDir := flag.String("out", "", "Base output directory")
+	//clean := flag.Bool("clean", false, "Clean build directory before compile")
+	//
+	//// Bind Options
+	//pkg := flag.String("pkg", "", "Go package name for binding")
+	//bindOut := flag.String("bindout", "", "Go file to write binding")
+	//
+	//// Compiler Options
+	solPath := compileOptions.SolContractPath
+	outDir := compileOptions.OutBaseDir
+
+	// Bind Options
+	pkg := bindOptions.PackageName
+	bindOut := bindOptions.OutFile
+	alias := "alison"
 
 	switch mode {
 	case contractkit.ModeCompile:
@@ -46,9 +59,25 @@ func main() {
 			panic(err)
 		}
 	case contractkit.ModeDeploy:
-		fmt.Println("🚀 Running in DEPLOY mode")
+	case "deploy":
+		logutil.Infof("🚀 Running in DEPLOY mode")
+		compileOpts := contractkit.CompileOptions{
+			SolContractPath: solPath,
+			OutBaseDir:      outDir,
+			Clean:           true,
+		}
+		bindOpts := contractkit.BindOptions{
+			PackageName: pkg,
+			OutFile:     bindOut,
+		}
+		deployOpts := contractkit.DeployOptions{
+			FromAlias: alias,
+		}
+		err := contractkit.RunDeploy(deployOpts, compileOpts, bindOpts)
+		if err != nil {
+			logutil.Exitf("Deployment failed: %v", err)
+		}
 	default:
-		fmt.Printf("❌ Unknown mode: %s\n", mode)
-		os.Exit(1)
+		logutil.Exitf("Usage: contractkitmain [compile|bind|deploy]")
 	}
 }
