@@ -2,7 +2,6 @@ package contract
 
 import (
 	"context"
-	"errors"
 	"eth-toy-client/core/httpapi"
 	toytypes "eth-toy-client/core/types"
 	"fmt"
@@ -67,20 +66,4 @@ func DeployContract(
 	}
 
 	return receipt.ContractAddress, txHash, nil
-}
-
-func waitForReceipt(ctx context.Context, rpc *ethclient.Client, txHash common.Hash) (common.Address, string, error, bool) {
-	for i := 0; i < 60; i++ {
-		receipt, err := rpc.TransactionReceipt(ctx, txHash)
-		if err == nil && receipt != nil {
-			if receipt.ContractAddress == (common.Address{}) {
-				return common.Address{}, txHash.Hex(), errors.New("receipt has no contract address"), true
-			}
-			fmt.Printf("✅ Contract deployed at %s (block %d)\n",
-				receipt.ContractAddress.Hex(), receipt.BlockNumber.Uint64())
-			return receipt.ContractAddress, txHash.Hex(), nil, true
-		}
-		time.Sleep(1 * time.Second)
-	}
-	return common.Address{}, "", nil, false
 }

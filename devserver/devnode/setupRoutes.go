@@ -29,7 +29,19 @@ type accountResponse struct {
 func SetupRoutes(devAccount common.Address, rpcPort string, accounts *map[string]*TestAccount) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/dev-account", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/dev-account", handleDevAccounts(devAccount))
+	mux.HandleFunc("/accounts", handleAccounts(accounts))
+	mux.HandleFunc("/info", handleInfo(rpcPort, accounts))
+	mux.HandleFunc("/sign-tx", signTxHandler(rpcPort, accounts))
+	mux.HandleFunc("/send-tx", handleSendTx(rpcPort, accounts))
+	mux.HandleFunc("/api/sign-tx", handleSignTx(rpcPort, accounts))
+	mux.HandleFunc("/api/send-tx", handleSendTxAPI(rpcPort, accounts))
+
+	return mux
+}
+
+func handleDevAccounts(devAccount common.Address) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		resp := struct {
 			Address string `json:"address"`
 		}{
@@ -38,9 +50,11 @@ func SetupRoutes(devAccount common.Address, rpcPort string, accounts *map[string
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
-	})
+	}
+}
 
-	mux.HandleFunc("/accounts", func(w http.ResponseWriter, r *http.Request) {
+func handleAccounts(accounts *map[string]*TestAccount) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		var list []accountResponse
 		for name, acc := range *accounts {
 			privKeyBytes := crypto.FromECDSA(acc.PrivKey) // import "github.com/ethereum/go-ethereum/crypto"
@@ -52,10 +66,11 @@ func SetupRoutes(devAccount common.Address, rpcPort string, accounts *map[string
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(list)
-	})
+	}
+}
 
-	// 🆕 /info endpoint
-	mux.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
+func handleInfo(rpcPort string, accounts *map[string]*TestAccount) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		resp := struct {
 			RPCURL        string `json:"rpcUrl"`
 			RPCPort       string `json:"rpcPort"`
@@ -68,15 +83,7 @@ func SetupRoutes(devAccount common.Address, rpcPort string, accounts *map[string
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
-	})
-
-	mux.HandleFunc("/sign-tx", signTxHandler(rpcPort, accounts))
-	mux.HandleFunc("/send-tx", handleSendTx(rpcPort, accounts))
-
-	mux.HandleFunc("/api/sign-tx", handleSignTx(rpcPort, accounts))
-	mux.HandleFunc("/api/send-tx", handleSendTxAPI(rpcPort, accounts))
-
-	return mux
+	}
 }
 
 func signTxHandler(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
