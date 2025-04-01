@@ -99,7 +99,7 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 	}, nil
 }
 
-func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, error) {
+func RunBind(compileOpts CompileOptions) (*BuildResult, error) {
 	result, err := CompileContract(compileOpts)
 	if err != nil {
 		return nil, logutil.ErrorErrf("compilation failed before binding: %w", err)
@@ -126,11 +126,11 @@ func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, er
 		return nil, logutil.ErrorErrf("abigen failed: %w\nOutput: %s", err, string(out))
 	}
 
-	logutil.Infof("✅ abigen: %s → %s", abiFile, bindOpts.OutFile)
+	logutil.Infof("✅ abigen: %s → %s", abiFile, goFile)
 	return result, nil
 }
 
-func RunDeploy(opts DeployOptions, compileOpts CompileOptions, bindOpts BindOptions) error {
+func RunDeploy(opts DeployOptions, compileOpts CompileOptions) error {
 	logutil.Infof("🚀 Deploying contract from alias: %s", opts.FromAlias)
 
 	devCtx, err := devutil.GetDevContext(opts.FromAlias)
@@ -139,7 +139,7 @@ func RunDeploy(opts DeployOptions, compileOpts CompileOptions, bindOpts BindOpti
 	}
 	defer devCtx.Client.Close()
 
-	result, err := RunBind(compileOpts, bindOpts)
+	result, err := RunBind(compileOpts)
 	if err != nil {
 		return logutil.ErrorErrf("compilation failed: %w", err)
 	}
