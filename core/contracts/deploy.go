@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"sync"
 	"time"
 )
 
@@ -66,4 +67,40 @@ func DeployContract(
 	}
 
 	return receipt.ContractAddress, txHash, nil
+}
+
+type AliasDeployRequest struct {
+	From     string `json:"from"`          // e.g., "alice"
+	Alias    string `json:"alias"`         // e.g., "counter-v1"
+	Bytecode string `json:"bytecode"`      // "0x..."
+	ABI      string `json:"abi,omitempty"` // optional for now
+}
+
+type ContractMeta struct {
+	Alias     string         `json:"alias"`
+	Address   common.Address `json:"address"`
+	TxHash    common.Hash    `json:"txHash"`
+	ABI       string         `json:"abi"`
+	Timestamp time.Time      `json:"timestamp"`
+}
+
+type ContractRegistry struct {
+	mu      sync.RWMutex
+	entries map[string]ContractMeta
+}
+
+func NewRegistry() *ContractRegistry {
+	return &ContractRegistry{
+		entries: make(map[string]ContractMeta),
+	}
+}
+
+func (r *ContractRegistry) Add(meta ContractMeta) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, exists := r.entries[meta.Alias]; exists {
+		return fmt.Errorf("alias already exists: %s", meta.Alias)
+	}
+	r.entries[meta.Alias] = meta
+	return nil
 }
