@@ -47,6 +47,9 @@ func main() {
 		if err != nil {
 			logutil.Exitf("Deployment failed: %v", err)
 		}
+	case contractkit.ModeAliasDeploy:
+		logutil.Infof("🚀 Running in ALIAS DEPLOY mode")
+
 	default:
 		logutil.Exitf("Usage: contractkitmain [compile|bind|deploy]")
 	}

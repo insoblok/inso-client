@@ -15,9 +15,10 @@ import (
 type Mode string
 
 const (
-	ModeCompile Mode = "COMPILE"
-	ModeBind    Mode = "BIND"
-	ModeDeploy  Mode = "DEPLOY"
+	ModeCompile     Mode = "COMPILE"
+	ModeBind        Mode = "BIND"
+	ModeDeploy      Mode = "DEPLOY"
+	ModeAliasDeploy Mode = "ALIASDEPLOY"
 )
 
 // CompileOptions holds inputs for the compiler step

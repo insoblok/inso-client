@@ -104,3 +104,9 @@ func (r *ContractRegistry) Add(meta ContractMeta) error {
 	r.entries[meta.Alias] = meta
 	return nil
 }
+
+type AliasDeployResponse struct {
+	Alias   string `json:"alias"`
+	Address string `json:"address"`
+	TxHash  string `json:"txHash"`
+}

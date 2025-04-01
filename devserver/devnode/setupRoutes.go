@@ -400,32 +400,29 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 	}
 }
 
+// ✅ HTTP handler for alias-based deploy
 func handleAliasDeploy(reg *contract.ContractRegistry, rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req contract.AliasDeployRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			logutil.Errorf("Invalid deploy request: %v", err)
 			httpapi.WriteError(w, 400, "InvalidRequest", "Could not parse JSON")
 			return
 		}
 
 		logutil.Infof("🚀 Deploying contract with alias '%s' from '%s'", req.Alias, req.From)
 
-		// Check account
 		from, ok := (*accounts)[req.From]
 		if !ok {
 			httpapi.WriteError(w, 400, "InvalidAccount", fmt.Sprintf("Sender '%s' not found", req.From))
 			return
 		}
 
-		// Decode bytecode
-		data, err := hex.DecodeString(strings.TrimPrefix(req.Bytecode, "0x"))
+		data, err := hexDecode(req.Bytecode)
 		if err != nil {
 			httpapi.WriteError(w, 400, "InvalidBytecode", "Could not decode bytecode")
 			return
 		}
 
-		// Build + Sign
 		tx, signed, err := BuildAndSignTx(from.PrivKey, from.Address, nil, big.NewInt(0), rpcPort, data)
 		if err != nil {
 			httpapi.WriteError(w, 500, "SigningFailed", err.Error())
@@ -442,7 +439,6 @@ func handleAliasDeploy(reg *contract.ContractRegistry, rpcPort string, accounts 
 
 		logutil.Infof("✅ TX sent: %s", tx.Hash().Hex())
 
-		// Wait for receipt
 		var receipt *types.Receipt
 		for i := 0; i < 60; i++ {
 			receipt, _ = client.TransactionReceipt(context.Background(), tx.Hash())
@@ -469,10 +465,15 @@ func handleAliasDeploy(reg *contract.ContractRegistry, rpcPort string, accounts 
 			return
 		}
 
-		httpapi.WriteOK(w, map[string]any{
-			"alias":   meta.Alias,
-			"address": meta.Address.Hex(),
-			"txHash":  meta.TxHash.Hex(),
+		httpapi.WriteOK(w, &contract.AliasDeployResponse{
+			Alias:   meta.Alias,
+			Address: meta.Address.Hex(),
+			TxHash:  meta.TxHash.Hex(),
 		})
 	}
+}
+
+// Utility for decoding hex with 0x prefix
+func hexDecode(hexStr string) ([]byte, error) {
+	return common.FromHex(hexStr), nil
 }
