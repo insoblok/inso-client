@@ -2,73 +2,111 @@ package contractkit
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
+// Mode determines what task to run
+type Mode string
+
+const (
+	ModeCompile Mode = "COMPILE"
+	ModeBind    Mode = "BIND"
+	ModeDeploy  Mode = "DEPLOY"
+)
+
+// CompileOptions holds inputs for the compiler step
 type CompileOptions struct {
-	SolContractPath string // e.g. "contracts/Counter.sol"
-	OutBaseDir      string // e.g. "build/"
-	Clean           bool   // clean target dir before compiling
+	SolContractPath string // Full path to .sol file
+	OutBaseDir      string // Absolute base directory
+	Clean           bool   // If true, delete output dir before build
 }
 
-func CompileContract(opts CompileOptions) (string, error) {
-	// 🧠 Derive contract name (no extension)
-	base := filepath.Base(opts.SolContractPath)
-	name := strings.TrimSuffix(base, filepath.Ext(base)) // "Counter"
+// BindOptions holds inputs for the abigen step
+type BindOptions struct {
+	PackageName string // Go package name for generated code
+	OutFile     string // Path for generated .go file
+}
 
-	outDir := filepath.Join(opts.OutBaseDir, name) // e.g. "build/Counter"
+// DeployOptions holds runtime info for deployment
+type DeployOptions struct {
+	RPCURL    string // JSON-RPC endpoint
+	FromAlias string // Sender account alias (e.g., "alice")
+	ServerURL string // DevServer API endpoint (e.g., http://localhost:8575)
+}
 
-	// 🧹 Clean if requested
+// BuildResult represents outputs of the compile step
+type BuildResult struct {
+	BuildDir string // Relative to OutBaseDir
+	ABIPath  string // Relative to BuildDir
+	BINPath  string // Relative to BuildDir
+	Contract string // Contract name (no extension)
+}
+
+// CompileContract compiles the contract and returns build metadata
+func CompileContract(opts CompileOptions) (*BuildResult, error) {
+	contractName := strings.TrimSuffix(
+		filepath.Base(opts.SolContractPath),
+		filepath.Ext(opts.SolContractPath),
+	)
+
+	log.Info(
+		"Compiling contract",
+		"contract", contractName,
+		"solContractPath", opts.SolContractPath,
+		"outBaseDir", opts.OutBaseDir,
+		"clean", opts.Clean)
+
+	buildDir := filepath.Join(opts.OutBaseDir, contractName)
+
 	if opts.Clean {
-		if err := os.RemoveAll(outDir); err != nil {
-			return "", fmt.Errorf("failed to clean outdir: %w", err)
-		}
+		_ = os.RemoveAll(buildDir)
 	}
 
-	// 📂 Ensure output dir exists
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
-		return "", fmt.Errorf("failed to create outdir: %w", err)
+	// Create output dir if not exists
+	if err := os.MkdirAll(buildDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create build dir: %w", err)
 	}
 
-	// 🛠️ Run solc
 	cmd := exec.Command(
 		"solc",
 		"--abi",
 		"--bin",
-		"-o", outDir,
+		"--overwrite",
+		"-o", buildDir,
 		opts.SolContractPath,
 	)
-
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("solc failed: %w\nOutput: %s", err, string(out))
+		return nil, fmt.Errorf("solc failed: %w\nOutput: %s", err, string(out))
 	}
 
-	fmt.Printf("✅ Compiled %s → %s\n", opts.SolContractPath, outDir)
-	return outDir, nil
+	fmt.Printf("✅ Compiled %s → %s\n", opts.SolContractPath, buildDir)
+
+	return &BuildResult{
+		BuildDir: buildDir,
+		ABIPath:  filepath.Base(contractName + ".abi"),
+		BINPath:  filepath.Base(contractName + ".bin"),
+		Contract: contractName,
+	}, nil
 }
 
-type BindOptions struct {
-	PackageName string // Go package name for the bindings
-	OutFile     string // output Go file path (e.g. bindings/counter.go)
-}
-
-func RunBind(compileOpts CompileOptions, bindOpts BindOptions) error {
-	outBaseDir, err := CompileContract(compileOpts)
+// RunBind compiles and binds the contract
+func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, error) {
+	result, err := CompileContract(compileOpts)
 	if err != nil {
-		return fmt.Errorf("compilation failed before binding: %w", err)
+		return nil, fmt.Errorf("compilation failed before binding: %w", err)
 	}
 
-	contractDir := outBaseDir
-	contractName := filepath.Base(contractDir)
+	abiFile := filepath.Join(compileOpts.OutBaseDir, result.BuildDir, result.ABIPath)
+	binFile := filepath.Join(compileOpts.OutBaseDir, result.BuildDir, result.BINPath)
 
-	abiFile := filepath.Join(contractDir, contractName+".abi")
-	binFile := filepath.Join(contractDir, contractName+".bin")
+	fmt.Printf("ABI file: %s\n", abiFile)
+	fmt.Printf("BIN file: %s\n", binFile)
 
-	// 🧬 Run abigen
 	cmd := exec.Command(
 		"abigen",
 		"--abi", abiFile,
@@ -76,21 +114,11 @@ func RunBind(compileOpts CompileOptions, bindOpts BindOptions) error {
 		"--pkg", bindOpts.PackageName,
 		"--out", bindOpts.OutFile,
 	)
-
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("abigen failed: %w\nOutput: %s", err, string(out))
+		return nil, fmt.Errorf("abigen failed: %w\nOutput: %s", err, string(out))
 	}
 
 	fmt.Printf("✅ abigen: %s → %s\n", abiFile, bindOpts.OutFile)
-	return nil
-}
-
-type DeployOptions struct {
-	SolContractPath string
-	OutBaseDir      string
-}
-
-func DeployContract(opts DeployOptions) error {
-	return nil
+	return result, nil
 }

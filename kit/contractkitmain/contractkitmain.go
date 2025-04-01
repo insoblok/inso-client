@@ -6,22 +6,13 @@ import (
 	"os"
 )
 
-// Mode defines what operation we want to run
-type Mode string
-
-const (
-	ModeCompile Mode = "compile"
-	ModeBind    Mode = "bind"
-	ModeDeploy  Mode = "deploy"
-)
-
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: contractkitmain [compile|bind|deploy]")
 		os.Exit(1)
 	}
 
-	mode := Mode(os.Args[1])
+	mode := contractkit.Mode(os.Args[1])
 
 	compileOptions := contractkit.CompileOptions{
 		SolContractPath: "/Users/iyadi/playground/eth-toy-client/eth-toy-client/sol/contracts/Counter.sol",
@@ -40,19 +31,19 @@ func main() {
 	//}
 
 	switch mode {
-	case ModeCompile:
+	case contractkit.ModeCompile:
 		fmt.Println("🛠️ Running in COMPILE mode")
 		_, err := contractkit.CompileContract(compileOptions)
 		if err != nil {
 			panic(err)
 		}
-	case ModeBind:
+	case contractkit.ModeBind:
 		fmt.Println("🔧 Running in BIND mode")
-		err := contractkit.RunBind(compileOptions, bindOptions)
+		_, err := contractkit.RunBind(compileOptions, bindOptions)
 		if err != nil {
 			panic(err)
 		}
-	case ModeDeploy:
+	case contractkit.ModeDeploy:
 		fmt.Println("🚀 Running in DEPLOY mode")
 	default:
 		fmt.Printf("❌ Unknown mode: %s\n", mode)
