@@ -49,16 +49,16 @@ type BuildResult struct {
 func CompileContract(opts CompileOptions) (*BuildResult, error) {
 	// ✅ Validate contract path
 	if _, err := os.Stat(opts.SolContractPath); os.IsNotExist(err) {
-		return nil, logutil.Errorf("sol contract file does not exist: %s", opts.SolContractPath)
+		return nil, logutil.ErrorErrf("sol contract file does not exist: %s", opts.SolContractPath)
 	}
 
 	// 📁 Ensure output base dir exists
 	if _, err := os.Stat(opts.OutBaseDir); os.IsNotExist(err) {
-		logutil.Info("Output base dir not found — creating", "path", opts.OutBaseDir)
+		logutil.Infof("Output base dir not found — creating: %s", opts.OutBaseDir)
 		if err := os.MkdirAll(opts.OutBaseDir, 0o755); err != nil {
-			return nil, logutil.Errorf("failed to create OutBaseDir: %w", err)
+			return nil, logutil.ErrorErrf("failed to create OutBaseDir: %w", err)
 		}
-		logutil.Info("✅ Created OutBaseDir", "path", opts.OutBaseDir)
+		logutil.Infof("✅ Created OutBaseDir: %s", opts.OutBaseDir)
 	}
 
 	contractName := strings.TrimSuffix(
@@ -66,12 +66,9 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 		filepath.Ext(opts.SolContractPath),
 	)
 
-	logutil.Info(
-		"Compiling contract",
-		"contract", contractName,
-		"solContractPath", opts.SolContractPath,
-		"outBaseDir", opts.OutBaseDir,
-		"clean", opts.Clean)
+	logutil.Infof(
+		"Compiling contract: contract=%s solContractPath=%s outBaseDir=%s clean=%v",
+		contractName, opts.SolContractPath, opts.OutBaseDir, opts.Clean)
 
 	buildDir := filepath.Join(opts.OutBaseDir, contractName)
 
@@ -81,7 +78,7 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 
 	// ✅ Create output dir if needed
 	if err := os.MkdirAll(buildDir, 0o755); err != nil {
-		return nil, logutil.Errorf("failed to create build dir: %w", err)
+		return nil, logutil.ErrorErrf("failed to create build dir: %w", err)
 	}
 
 	// ✅ Run solc
@@ -95,10 +92,10 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, logutil.Errorf("solc failed: %w\nOutput: %s", err, string(out))
+		return nil, logutil.ErrorErrf("solc failed: %w\nOutput: %s", err, string(out))
 	}
 
-	logutil.Info("✅ Compiled %s → %s\n", opts.SolContractPath, buildDir)
+	logutil.Infof("✅ Compiled %s → %s", opts.SolContractPath, buildDir)
 
 	return &BuildResult{
 		BuildDir: buildDir,
@@ -112,14 +109,14 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, error) {
 	result, err := CompileContract(compileOpts)
 	if err != nil {
-		return nil, logutil.Errorf("compilation failed before binding: %w", err)
+		return nil, logutil.ErrorErrf("compilation failed before binding: %w", err)
 	}
 
 	abiFile := filepath.Join(compileOpts.OutBaseDir, result.BuildDir, result.ABIPath)
 	binFile := filepath.Join(compileOpts.OutBaseDir, result.BuildDir, result.BINPath)
 
-	logutil.Info("ABI file: %s\n", abiFile)
-	logutil.Info("BIN file: %s\n", binFile)
+	logutil.Infof("ABI file: %s\n", abiFile)
+	logutil.Infof("BIN file: %s\n", binFile)
 
 	cmd := exec.Command(
 		"abigen",
@@ -130,9 +127,9 @@ func RunBind(compileOpts CompileOptions, bindOpts BindOptions) (*BuildResult, er
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, logutil.Errorf("abigen failed: %w\nOutput: %s", err, string(out))
+		return nil, logutil.ErrorErrf("abigen failed: %w\nOutput: %s", err, string(out))
 	}
 
-	logutil.Info("✅ abigen: %s → %s\n", abiFile, bindOpts.OutFile)
+	logutil.Infof("✅ abigen: %s → %s\n", abiFile, bindOpts.OutFile)
 	return result, nil
 }

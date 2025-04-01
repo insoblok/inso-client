@@ -8,10 +8,10 @@ import (
 )
 
 func main() {
-	logutil.Info("📣 super duper main started")
+	logutil.Infof("📣 super duper main started")
 
 	if len(os.Args) < 2 {
-		logutil.LogAndExit("Usage: contractkitmain [compile|bind|deploy]")
+		logutil.Exitf("Usage: contractkitmain [compile|bind|deploy]")
 	}
 
 	mode := contractkit.Mode(os.Args[1])

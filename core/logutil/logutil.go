@@ -5,28 +5,29 @@ import (
 	"os"
 )
 
-func Info(msg string, args ...any) {
-	fmt.Printf("ℹ️  "+msg+"\n", args...)
+// ℹ️ Informational log
+func Infof(format string, args ...any) {
+	fmt.Printf("ℹ️  "+format+"\n", args...)
 }
 
-func Warn(msg string, args ...any) {
-	fmt.Printf("⚠️  "+msg+"\n", args...)
+// ⚠️ Warning log
+func Warnf(format string, args ...any) {
+	fmt.Printf("⚠️  "+format+"\n", args...)
 }
 
-func Error(msg string, args ...any) {
-	fmt.Printf("❌ "+msg+"\n", args...)
+// ❌ Error log
+func Errorf(format string, args ...any) {
+	fmt.Printf("❌ "+format+"\n", args...)
 }
 
-// LogAndExit prints a message and exits the program
-func LogAndExit(msg string) {
-	_, err := fmt.Fprintf(os.Stderr, "❌ %s\n", msg)
-	if err != nil {
-		return
-	}
+// 💀 Fatal error with exit
+func Exitf(format string, args ...any) {
+	msg := fmt.Sprintf("💀 "+format, args...)
+	fmt.Fprintln(os.Stderr, msg)
 	os.Exit(1)
 }
 
-// Errorf returns a formatted error with ❌ prefix
-func Errorf(format string, args ...interface{}) error {
+// ❌ Create error for propagation (not printed immediately)
+func ErrorErrf(format string, args ...any) error {
 	return fmt.Errorf("❌ "+format, args...)
 }
