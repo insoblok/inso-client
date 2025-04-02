@@ -350,11 +350,9 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 			}
 
 			logutil.Infof("Received Req Bin data: %s", req.Data)
-			//dataBytes := []byte(req.Data)
+			dataBytes := []byte(req.Data)
 
-			rawHex := strings.TrimPrefix(req.Data, "0x")
-			dataBytes, _ := hex.DecodeString(rawHex)
-
+			fmt.Println("Length after []byte(req.Data):", len(dataBytes)) // server
 			checksumBytes := sha256.Sum256(dataBytes)
 			checksum := hex.EncodeToString(checksumBytes[:])
 			logutil.Infof("🔐 Received Checksum from client: %s", req.Checksum)
@@ -366,7 +364,8 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 				logutil.Warnf("⚠️  Checksum mismatch! Possible corruption or encoding error")
 			}
 			toAddr = nil
-			data = dataBytes
+			//dataBytes, _ = hex.DecodeString("0x" + req.Data)
+			dataBytes = []byte("0x" + req.Data)
 		} else {
 			// 🔁 Normal Transfer
 			toAccount, ok := (*accounts)[req.To]

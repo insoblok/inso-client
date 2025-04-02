@@ -351,7 +351,7 @@ func TestDeployCounterContractViaAPI(t *testing.T) {
 	// 🧱 Load contract bytecode from Go binding
 	bytecode := counter.CounterMetaData.Bin
 	contractAddr, txHash, err := contract.DeployContract(
-		ctx, client, urls.ServerURL, alice.Name, bytecode,""
+		ctx, client, urls.ServerURL, alice.Name, bytecode, "",
 	)
 	require.NoError(t, err)
 
@@ -371,7 +371,7 @@ func TestDeployContract_InvalidBytecode(t *testing.T) {
 	// 🧪 Tamper with bytecode: flip some characters near the start
 	badBytecode := "0xDEAD" + bytecode[6:]
 
-	contractAddr, _, err := contract.DeployContract(ctx, client, urls.ServerURL, alice.Name, badBytecode,"")
+	contractAddr, _, err := contract.DeployContract(ctx, client, urls.ServerURL, alice.Name, badBytecode, "")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "contract code is empty")
 	t.Logf("✅ Expected error from bad bytecode: %v", err)
@@ -385,7 +385,7 @@ func TestRetrieveBlockContentByNumber(t *testing.T) {
 	client, _, _, _ := MustGet(t, urls)
 	defer client.Close()
 
-	blockNumber := big.NewInt(9)
+	blockNumber := big.NewInt(7)
 	block, err := client.BlockByNumber(context.Background(), blockNumber)
 	if err != nil {
 		logutil.Errorf("❌ Failed to get block by number %d: %v", blockNumber.Int64(), err)
@@ -416,7 +416,7 @@ func TestDebugTraceTransaction(t *testing.T) {
 	client, _, _, _ := MustGet(t, urls)
 	defer client.Close()
 
-	txHash := common.HexToHash("0x2c505732f473628ce5b9e491e260254778ca8ccde39769c0c4a4300094bab7f2")
+	txHash := common.HexToHash("0xfe196a1de723b21a066c5d0062d61114059b726b90c835318dfd141bbb9713ed")
 
 	// ⚙️ Manual raw RPC call since `debug_traceTransaction` is not part of ethclient
 	var result map[string]interface{}

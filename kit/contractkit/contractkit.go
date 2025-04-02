@@ -8,6 +8,7 @@ import (
 	"eth-toy-client/core/devutil"
 	"eth-toy-client/core/httpapi"
 	"eth-toy-client/core/logutil"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -145,6 +146,79 @@ func RunBind(compileOpts CompileOptions) (*BuildResult, error) {
 	return result, nil
 }
 
+func RunAliasDeploy(alias string, compileOpts CompileOptions, opts DeployOptions) error {
+
+	logutil.Infof("🚀 Deploying contract from alias: %s", opts.FromAlias)
+
+	devCtx, err := devutil.GetDevContext(opts.FromAlias)
+	if err != nil {
+		return logutil.ErrorErrf("failed to setup dev context: %w", err)
+	}
+	defer devCtx.Client.Close()
+
+	result, err := RunBind(compileOpts)
+	if err != nil {
+		return logutil.ErrorErrf("compilation failed: %w", err)
+	}
+
+	binPath := filepath.Join(result.BuildDir, result.ContractName+".bin")
+	bytecode, err := os.ReadFile(binPath)
+	byteCodeString := string(bytecode)
+	logutil.Infof("Bytecode: string %s", byteCodeString)
+	fmt.Println("Length of original bytecode:", len(bytecode)) // client
+
+	if err != nil {
+		return logutil.ErrorErrf("failed to read bin file: %w", err)
+	}
+
+	logutil.Infof("Sending Bytecode: Checksum %s", result.Checksum)
+
+	addr, txHash, err := contract.DeployContract(
+		context.Background(),
+		devCtx.Client,
+		devCtx.ServerURL,
+		devCtx.FromAlias,
+		byteCodeString,
+		result.Checksum)
+	if err != nil {
+		return logutil.ErrorErrf("contract deployment failed: %w", err)
+	}
+
+	logutil.Infof("✅ Contract deployed at: %s (tx: %s)", addr.Hex(), txHash)
+
+	logutil.Infof("🚀 Register contract from alias: %s", alias)
+	meta := contract.DeployedContractMetaJSON{
+		Alias:     alias,
+		Address:   addr.Hex(),
+		TxHash:    txHash,
+		ABI:       stringOrEmpty(binPath),
+		Bytecode:  byteCodeString,
+		Timestamp: time.Now().Unix(),
+		Owner:     opts.FromAlias,
+		Overwrite: true,
+	}
+
+	_, apiErr, err := httpapi.PostWithAPIResponse[any](devCtx.ServerURL+"/api/register-alias", meta)
+	if err != nil {
+		return logutil.ErrorErrf("http error while registering alias: %w", err)
+	}
+	if apiErr != nil {
+		return logutil.ErrorErrf("api error: %s — %s", apiErr.Code, apiErr.Message)
+	}
+
+	logutil.Infof("📇 Registered contract alias: %s", alias)
+	return nil
+}
+
+// Helper to read file contents (or return empty string)
+func stringOrEmpty(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
 func RunDeploy(compileOpts CompileOptions, opts DeployOptions) error {
 	logutil.Infof("🚀 Deploying contract from alias: %s", opts.FromAlias)
 
@@ -180,74 +254,4 @@ func RunDeploy(compileOpts CompileOptions, opts DeployOptions) error {
 
 	logutil.Infof("✅ Contract deployed at: %s (tx: %s)", addr.Hex(), txHash)
 	return nil
-}
-
-func RunAliasDeploy(alias string, compileOpts CompileOptions, opts DeployOptions) error {
-
-	logutil.Infof("🚀 Deploying contract from alias: %s", opts.FromAlias)
-
-	devCtx, err := devutil.GetDevContext(opts.FromAlias)
-	if err != nil {
-		return logutil.ErrorErrf("failed to setup dev context: %w", err)
-	}
-	defer devCtx.Client.Close()
-
-	result, err := RunBind(compileOpts)
-	if err != nil {
-		return logutil.ErrorErrf("compilation failed: %w", err)
-	}
-
-	binPath := filepath.Join(result.BuildDir, result.ContractName+".bin")
-	bytecode, err := os.ReadFile(binPath)
-	logutil.Infof("Bytecode: string %s", string(bytecode))
-	if err != nil {
-		return logutil.ErrorErrf("failed to read bin file: %w", err)
-	}
-
-	logutil.Infof("Sending Bytecode: Checksum %s", result.Checksum)
-
-	addr, txHash, err := contract.DeployContract(
-		context.Background(),
-		devCtx.Client,
-		devCtx.ServerURL,
-		devCtx.FromAlias,
-		string(bytecode),
-		result.Checksum)
-	if err != nil {
-		return logutil.ErrorErrf("contract deployment failed: %w", err)
-	}
-
-	logutil.Infof("✅ Contract deployed at: %s (tx: %s)", addr.Hex(), txHash)
-
-	logutil.Infof("🚀 Register contract from alias: %s", alias)
-	meta := contract.DeployedContractMetaJSON{
-		Alias:     alias,
-		Address:   addr.Hex(),
-		TxHash:    txHash,
-		ABI:       stringOrEmpty(binPath),
-		Bytecode:  "0x" + hex.EncodeToString(bytecode),
-		Timestamp: time.Now().Unix(),
-		Owner:     opts.FromAlias,
-		Overwrite: true,
-	}
-
-	_, apiErr, err := httpapi.PostWithAPIResponse[any](devCtx.ServerURL+"/api/register-alias", meta)
-	if err != nil {
-		return logutil.ErrorErrf("http error while registering alias: %w", err)
-	}
-	if apiErr != nil {
-		return logutil.ErrorErrf("api error: %s — %s", apiErr.Code, apiErr.Message)
-	}
-
-	logutil.Infof("📇 Registered contract alias: %s", alias)
-	return nil
-}
-
-// Helper to read file contents (or return empty string)
-func stringOrEmpty(path string) string {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	return string(data)
 }
