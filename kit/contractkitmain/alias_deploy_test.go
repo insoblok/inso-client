@@ -51,8 +51,9 @@ func TestComposeContractPath(t *testing.T) {
 
 func TestALiasDeploySingleContract(t *testing.T) {
 	owner := "alice"
-	deploySingleContract("CounterV2", owner, "CounterV2")
-	//deploySingleContract(MockUSDC, owner, MockUSDCV1)
+	//deploySingleContract("IntTestExploder", owner, "IntTestExploder")
+	//deploySingleContract("CounterV2", owner, "CounterV2")
+	deploySingleContract(MockUSDC, owner, MockUSDCV1)
 	//deploySingleContract(Counter, owner, CounterV1)
 }
 

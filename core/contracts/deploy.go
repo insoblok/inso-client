@@ -19,16 +19,19 @@ func DeployContract(
 	serverURL string,
 	fromAlias string,
 	bytecode string,
+	checkSum string,
 ) (common.Address, string, error) {
 	req := toytypes.SignTxRequest{
-		From:  fromAlias,
-		To:    "",
-		Value: "0",
-		Data:  bytecode,
+		From:     fromAlias,
+		To:       "",
+		Value:    "0",
+		Data:     bytecode,
+		Checksum: checkSum,
 	}
 
 	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SendTxAPIResponse](
-		serverURL+"/api/send-tx", req,
+		serverURL+"/api/send-tx",
+		req,
 	)
 	if err != nil {
 		return common.Address{}, "", fmt.Errorf("http error: %w", err)

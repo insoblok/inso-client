@@ -3,6 +3,7 @@ package devnode
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"eth-toy-client/core/consts"
@@ -348,12 +349,23 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 				return
 			}
 
-			dataBytes, err := hex.DecodeString(strings.TrimPrefix(req.Data, "0x"))
-			if err != nil {
-				log.Printf("❌ Failed to decode contract bytecode: %v", err)
-				httpapi.WriteError(w, http.StatusBadRequest, "InvalidData", "Failed to decode contract bytecode")
-				return
+			logutil.Infof("Received Req Bin data: %s", req.Data)
+			//dataBytes := []byte(req.Data)
+
+			rawHex := strings.TrimPrefix(req.Data, "0x")
+			dataBytes, _ := hex.DecodeString(rawHex)
+
+			checksumBytes := sha256.Sum256(dataBytes)
+			checksum := hex.EncodeToString(checksumBytes[:])
+			logutil.Infof("🔐 Received Checksum from client: %s", req.Checksum)
+			logutil.Infof("🧮 Recomputed Checksum from bytecode: %s", checksum)
+
+			if checksum == req.Checksum {
+				logutil.Infof("✅ Checksum match: bytecode integrity confirmed")
+			} else {
+				logutil.Warnf("⚠️  Checksum mismatch! Possible corruption or encoding error")
 			}
+			toAddr = nil
 			data = dataBytes
 		} else {
 			// 🔁 Normal Transfer
@@ -375,9 +387,9 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 			return
 		}
 
-		log.Printf("🧾 SignedTx hash: %s", signedTx.Hash().Hex())
-		log.Printf("📦 RLP Encoded TX: %s", hex.EncodeToString(RlpEncodeBytes(signedTx)))
-		log.Printf("📄 TX: to=%v, nonce=%d, value=%s", toAddr, signedTx.Nonce(), val.String())
+		//log.Printf("🧾 SignedTx hash: %s", signedTx.Hash().Hex())
+		//log.Printf("📦 RLP Encoded TX: %s", hex.EncodeToString(RlpEncodeBytes(signedTx)))
+		//log.Printf("📄 TX: to=%v, nonce=%d, value=%s", toAddr, signedTx.Nonce(), val.String())
 
 		client, err := ethclient.Dial("http://localhost:" + rpcPort)
 		if err != nil {

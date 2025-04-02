@@ -6,12 +6,14 @@ type SignTxAPIResponse struct {
 }
 
 type SignTxRequest struct {
-	From    string  `json:"from"`              // alias, e.g. "alice"
-	To      string  `json:"to"`                // recipient address (omit or "" for contract deployment)
-	Value   string  `json:"value"`             // amount in wei (as string)
-	Data    string  `json:"data,omitempty"`    // hex-encoded contract bytecode or call data
-	Nonce   *uint64 `json:"nonce,omitempty"`   // optional
-	ChainID *int64  `json:"chainId,omitempty"` // optional
+	From     string  `json:"from"`               // alias, e.g. "alice"
+	To       string  `json:"to"`                 // "" or omitted for contract deployment
+	Value    string  `json:"value"`              // amount in wei (as string)
+	Data     string  `json:"data,omitempty"`     // hex-encoded bytecode or calldata
+	Nonce    *uint64 `json:"nonce,omitempty"`    // optional
+	ChainID  *int64  `json:"chainId,omitempty"`  // optional
+	Type     string  `json:"type,omitempty"`     // e.g. "deploy", "call", "raw"
+	Checksum string  `json:"checksum,omitempty"` // sha256 of hex-decoded Data
 }
 
 type SendTxAPIResponse struct {

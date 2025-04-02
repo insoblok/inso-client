@@ -2,6 +2,7 @@ package contractkit
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/core/devutil"
@@ -46,6 +47,7 @@ type DeployOptions struct {
 type BuildResult struct {
 	BuildDir     string
 	ContractName string
+	Checksum     string // 🔐 SHA-256 of .bin content
 }
 
 func CompileContract(opts CompileOptions) (*BuildResult, error) {
@@ -95,9 +97,20 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 
 	logutil.Infof("✅ Compiled %s → %s", opts.SolContractPath, buildDir)
 
+	binPath := filepath.Join(buildDir, contractName+".bin")
+	binBytes, err := os.ReadFile(binPath)
+	if err != nil {
+		return nil, logutil.ErrorErrf("failed to read compiled .bin file: %w", err)
+	}
+
+	checksumBytes := sha256.Sum256(binBytes)
+	checksum := hex.EncodeToString(checksumBytes[:])
+	logutil.Infof("🔐 Bytecode SHA256: %s", checksum)
+
 	return &BuildResult{
 		BuildDir:     buildDir,
 		ContractName: contractName,
+		Checksum:     checksum,
 	}, nil
 }
 
@@ -152,7 +165,15 @@ func RunDeploy(compileOpts CompileOptions, opts DeployOptions) error {
 		return logutil.ErrorErrf("failed to read bin file: %w", err)
 	}
 
-	addr, txHash, err := contract.DeployContract(context.Background(), devCtx.Client, devCtx.ServerURL, devCtx.FromAlias, "0x"+string(bytecode))
+	logutil.Infof("Bytecode: Checksum %s", result.Checksum)
+
+	addr, txHash, err := contract.DeployContract(
+		context.Background(),
+		devCtx.Client,
+		devCtx.ServerURL,
+		devCtx.FromAlias,
+		"0x"+hex.EncodeToString(bytecode),
+		result.Checksum)
 	if err != nil {
 		return logutil.ErrorErrf("contract deployment failed: %w", err)
 	}
@@ -178,11 +199,20 @@ func RunAliasDeploy(alias string, compileOpts CompileOptions, opts DeployOptions
 
 	binPath := filepath.Join(result.BuildDir, result.ContractName+".bin")
 	bytecode, err := os.ReadFile(binPath)
+	logutil.Infof("Bytecode: string %s", string(bytecode))
 	if err != nil {
 		return logutil.ErrorErrf("failed to read bin file: %w", err)
 	}
 
-	addr, txHash, err := contract.DeployContract(context.Background(), devCtx.Client, devCtx.ServerURL, devCtx.FromAlias, "0x"+string(bytecode))
+	logutil.Infof("Sending Bytecode: Checksum %s", result.Checksum)
+
+	addr, txHash, err := contract.DeployContract(
+		context.Background(),
+		devCtx.Client,
+		devCtx.ServerURL,
+		devCtx.FromAlias,
+		string(bytecode),
+		result.Checksum)
 	if err != nil {
 		return logutil.ErrorErrf("contract deployment failed: %w", err)
 	}

@@ -351,7 +351,7 @@ func TestDeployCounterContractViaAPI(t *testing.T) {
 	// 🧱 Load contract bytecode from Go binding
 	bytecode := counter.CounterMetaData.Bin
 	contractAddr, txHash, err := contract.DeployContract(
-		ctx, client, urls.ServerURL, alice.Name, bytecode,
+		ctx, client, urls.ServerURL, alice.Name, bytecode,""
 	)
 	require.NoError(t, err)
 
@@ -371,7 +371,7 @@ func TestDeployContract_InvalidBytecode(t *testing.T) {
 	// 🧪 Tamper with bytecode: flip some characters near the start
 	badBytecode := "0xDEAD" + bytecode[6:]
 
-	contractAddr, _, err := contract.DeployContract(ctx, client, urls.ServerURL, alice.Name, badBytecode)
+	contractAddr, _, err := contract.DeployContract(ctx, client, urls.ServerURL, alice.Name, badBytecode,"")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "contract code is empty")
 	t.Logf("✅ Expected error from bad bytecode: %v", err)
