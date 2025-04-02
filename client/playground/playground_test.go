@@ -474,12 +474,12 @@ func TestDebugTransactionsInBlock(t *testing.T) {
 
 		// If status is 0 (failed/reverted), attempt to decode revert reason
 		if receipt.Status == 0 && tx.To() == nil {
-			fmt.Println("      Transaction Reverted. Checking for Revert Reason...")
+			fmt.Println("      Transaction Status is 0. Checking for Reason...")
 			revertReason, err := fetchRevertReason(client, tx)
 			if err != nil {
-				fmt.Printf("        Failed to fetch revert reason: %v\n", err)
+				fmt.Printf("        Failed to fetch reason: %v\n", err)
 			} else {
-				fmt.Printf("        Revert Reason: %s\n", revertReason)
+				fmt.Printf("         Reason: %s\n", revertReason)
 			}
 		}
 	}
@@ -523,20 +523,32 @@ func fetchRevertReason(client *ethclient.Client, tx *types.Transaction) (string,
 }
 
 func resolveAddress(client *ethclient.Client, tx *types.Transaction) (common.Address, error) {
-	// Fetch the chain ID for signing
 	chainID, err := client.NetworkID(context.Background())
 	if err != nil {
 		return common.Address{}, fmt.Errorf("failed to fetch chain ID: %v", err)
 	}
 
-	// Retrieve sender's address
-	msgSigner := types.NewEIP155Signer(chainID)
-	sender, err := msgSigner.Sender(tx)
+	fmt.Printf("    TxType %d\n", tx.Type())
+	// Use the transaction's specific signer type
+	//var signer types.Signer
+	//switch tx.Type() {
+	//case types.LegacyTxType:
+	//	signer = types.HomesteadSigner{}
+	//case types.AccessListTxType, types.DynamicFeeTxType:
+	//	signer = types.NewEIP155Signer(chainID)
+	//default:
+	//	return common.Address{}, fmt.Errorf("transaction type not supported")
+	//}
+
+	signer := types.NewEIP155Signer(chainID)
+
+	from, err := signer.Sender(tx)
 	if err != nil {
 		return common.Address{}, fmt.Errorf("failed to resolve sender: %v", err)
 	}
+	fmt.Printf("    Sender: %s\n", from.Hex())
 
-	return sender, nil
+	return from, nil
 }
 
 func abiStringDecode(data []byte) (string, error) {
