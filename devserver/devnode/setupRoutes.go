@@ -364,8 +364,8 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 				logutil.Warnf("⚠️  Checksum mismatch! Possible corruption or encoding error")
 			}
 			toAddr = nil
-			//dataBytes, _ = hex.DecodeString("0x" + req.Data)
-			dataBytes = []byte("0x" + req.Data)
+			dataBytes, _ = hex.DecodeString(req.Data)
+
 		} else {
 			// 🔁 Normal Transfer
 			toAccount, ok := (*accounts)[req.To]
@@ -385,10 +385,6 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())
 			return
 		}
-
-		//log.Printf("🧾 SignedTx hash: %s", signedTx.Hash().Hex())
-		//log.Printf("📦 RLP Encoded TX: %s", hex.EncodeToString(RlpEncodeBytes(signedTx)))
-		//log.Printf("📄 TX: to=%v, nonce=%d, value=%s", toAddr, signedTx.Nonce(), val.String())
 
 		client, err := ethclient.Dial("http://localhost:" + rpcPort)
 		if err != nil {

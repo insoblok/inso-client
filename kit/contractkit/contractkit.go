@@ -163,13 +163,13 @@ func RunAliasDeploy(alias string, compileOpts CompileOptions, opts DeployOptions
 
 	binPath := filepath.Join(result.BuildDir, result.ContractName+".bin")
 	bytecode, err := os.ReadFile(binPath)
-	byteCodeString := string(bytecode)
-	logutil.Infof("Bytecode: string %s", byteCodeString)
-	fmt.Println("Length of original bytecode:", len(bytecode)) // client
-
 	if err != nil {
 		return logutil.ErrorErrf("failed to read bin file: %w", err)
 	}
+
+	byteCodeString := string(bytecode)
+	logutil.Infof("Bytecode: string %s", byteCodeString)
+	fmt.Println("Length of original bytecode:", len(bytecode)) // client
 
 	logutil.Infof("Sending Bytecode: Checksum %s", result.Checksum)
 

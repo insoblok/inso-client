@@ -385,7 +385,7 @@ func TestRetrieveBlockContentByNumber(t *testing.T) {
 	client, _, _, _ := MustGet(t, urls)
 	defer client.Close()
 
-	blockNumber := big.NewInt(7)
+	blockNumber := big.NewInt(8)
 	block, err := client.BlockByNumber(context.Background(), blockNumber)
 	if err != nil {
 		logutil.Errorf("❌ Failed to get block by number %d: %v", blockNumber.Int64(), err)
