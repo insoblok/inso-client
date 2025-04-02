@@ -381,33 +381,34 @@ func TestDeployContract_InvalidBytecode(t *testing.T) {
 	require.Equal(t, common.Address{}, contractAddr)
 }
 
-func TestRetrievBlockContentByBumber(t *testing.T) {
+func TestRetrieveBlockContentByNumber(t *testing.T) {
 	urls := devutil.GetUrls()
 	client, _, _, _ := MustGet(t, urls)
 	defer client.Close()
-	blockNumber := big.NewInt(18)
+
+	blockNumber := big.NewInt(9)
 	block, err := client.BlockByNumber(context.Background(), blockNumber)
 	if err != nil {
-		logutil.Errorf("Failed to get block by number: %v", err)
+		logutil.Errorf("❌ Failed to get block by number %d: %v", blockNumber.Int64(), err)
+		t.FailNow()
 	}
-	// Print block details
-	fmt.Printf("Block Details:\n")
-	fmt.Printf("  Block Number : %d\n", block.Number().Uint64())
-	fmt.Printf("  Block Hash   : %s\n", block.Hash().Hex())
-	fmt.Printf("  Parent Hash  : %s\n", block.ParentHash().Hex())
-	fmt.Printf("  Gas Used     : %d\n", block.GasUsed())
-	fmt.Printf("  Gas Limit    : %d\n", block.GasLimit())
-	fmt.Printf("  Transactions : %d\n", len(block.Transactions()))
 
-	// Iterate and print all transactions in the block
-	for _, tx := range block.Transactions() {
-		fmt.Printf("  TX Hash: %s\n", tx.Hash().Hex())
+	logutil.Infof("📦 Block #%d", block.Number().Uint64())
+	logutil.Infof("🔗 Hash       : %s", block.Hash().Hex())
+	logutil.Infof("🔗 Parent Hash: %s", block.ParentHash().Hex())
+	logutil.Infof("⛽️ Gas Used   : %d / %d", block.GasUsed(), block.GasLimit())
+	logutil.Infof("💥 Transactions: %d", len(block.Transactions()))
+
+	for i, tx := range block.Transactions() {
+		logutil.Infof("  ➤ Tx #%d: %s", i, tx.Hash().Hex())
+
 		if tx.To() == nil {
-			fmt.Printf("    Contract Creation: true\n")
+			logutil.Infof("     📦 Contract creation")
 		} else {
-			fmt.Printf("    To: %s\n", tx.To().Hex())
+			logutil.Infof("     📬 To: %s", tx.To().Hex())
 		}
-		fmt.Printf("    Nonce: %d, Gas: %d, Value: %d\n", tx.Nonce(), tx.Gas(), tx.Value())
+
+		logutil.Infof("     🔢 Nonce: %d | ⛽ Gas: %d | 💰 Value: %s", tx.Nonce(), tx.Gas(), tx.Value().String())
 	}
 }
 
