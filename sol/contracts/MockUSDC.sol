@@ -8,7 +8,7 @@ contract MockUSDC {
     uint256 private totalSupply;
 
     mapping(address => uint256) private balanceOf;
-    mapping(address => mapping(address => uint256)) public allowance;
+    mapping(address => mapping(address => uint256)) private allowance;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -34,13 +34,13 @@ contract MockUSDC {
         emit Debug("Constructor done");
     }
 
-    function transfer(address to, uint256 amount) public returns (bool) {
-        require(balanceOf[msg.sender] >= amount, "Insufficient balance");
-        balanceOf[msg.sender] -= amount;
-        balanceOf[to] += amount;
-        emit Transfer(msg.sender, to, amount);
-        return true;
-    }
+//    function transfer(address to, uint256 amount) public returns (bool) {
+//        require(balanceOf[msg.sender] >= amount, "Insufficient balance");
+//        balanceOf[msg.sender] -= amount;
+//        balanceOf[to] += amount;
+//        emit Transfer(msg.sender, to, amount);
+//        return true;
+//    }
 //
 //    function approve(address spender, uint256 amount) public returns (bool) {
 //        allowance[msg.sender][spender] = amount;
