@@ -3,6 +3,7 @@ package contract
 import (
 	"context"
 	"eth-toy-client/core/httpapi"
+	"eth-toy-client/core/logutil"
 	toytypes "eth-toy-client/core/types"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
@@ -19,7 +20,6 @@ func DeployContract(
 	fromAlias string,
 	bytecode string,
 ) (common.Address, string, error) {
-	// 📨 Compose request
 	req := toytypes.SignTxRequest{
 		From:  fromAlias,
 		To:    "",
@@ -27,7 +27,6 @@ func DeployContract(
 		Data:  bytecode,
 	}
 
-	// 📤 Send tx
 	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SendTxAPIResponse](
 		serverURL+"/api/send-tx", req,
 	)
@@ -57,11 +56,30 @@ func DeployContract(
 		return common.Address{}, txHash, fmt.Errorf("⏱️ timeout waiting for tx %s", txHash)
 	}
 
-	// 🧪 Check deployed contract code
+	// Print receipt details for debugging
+	fmt.Println("Transaction Receipt Details:")
+	fmt.Printf("  Status: %d\n", receipt.Status) // Status: 1 (success) or 0 (failure)
+	fmt.Printf("  Transaction Hash: %s\n", receipt.TxHash.Hex())
+	fmt.Printf("  Contract Address: %s\n", receipt.ContractAddress.Hex())
+	fmt.Printf("  Block Number: %d\n", receipt.BlockNumber.Uint64())
+	fmt.Printf("  Gas Used: %d\n", receipt.GasUsed)
+	fmt.Println("  Logs:")
+	for i, log := range receipt.Logs {
+		fmt.Printf("    Log #%d: %+v\n", i, log)
+	}
+
+	if receipt.Status != 1 {
+		return common.Address{}, txHash, fmt.Errorf("transaction failed, status: %d", receipt.Status)
+	}
+
+	logutil.Infof("contract address: %s", receipt.ContractAddress.Hex())
+
 	code, err := client.CodeAt(ctx, receipt.ContractAddress, nil)
 	if err != nil {
 		return common.Address{}, txHash, fmt.Errorf("failed to fetch contract code: %w", err)
 	}
+	logutil.Infof("contract code: %x", string(code))
+	logutil.Infof("contract Tx Hash: %s", receipt.TxHash)
 	if len(code) == 0 {
 		return common.Address{}, txHash, fmt.Errorf("contract code is empty — deployment likely failed")
 	}

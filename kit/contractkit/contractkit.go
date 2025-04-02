@@ -128,7 +128,7 @@ func RunBind(compileOpts CompileOptions) (*BuildResult, error) {
 		return nil, logutil.ErrorErrf("abigen failed: %w\nOutput: %s", err, string(out))
 	}
 
-	logutil.Infof("✅ abigen: %s → %s", abiFile, goFile)
+	logutil.Infof("✅ abigen bind go file: %s → %s", abiFile, goFile)
 	return result, nil
 }
 
