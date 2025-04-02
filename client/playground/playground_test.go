@@ -13,8 +13,6 @@ import (
 	toytypes "eth-toy-client/core/types"
 	"eth-toy-client/sol/out/counter"
 	"fmt"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -412,179 +410,40 @@ func TestRetrieveBlockContentByNumber(t *testing.T) {
 	}
 }
 
-func TestDebugTransactionsInBlock(t *testing.T) {
+func TestDebugTraceTransaction(t *testing.T) {
 	urls := devutil.GetUrls()
 	client, _, _, _ := MustGet(t, urls)
 	defer client.Close()
 
-	// Define the block number to debug
-	blockNumber := big.NewInt(18)
+	txHash := common.HexToHash("0x2c505732f473628ce5b9e491e260254778ca8ccde39769c0c4a4300094bab7f2")
 
-	// Fetch block by number
-	block, err := client.BlockByNumber(context.Background(), blockNumber)
+	// ⚙️ Manual raw RPC call since `debug_traceTransaction` is not part of ethclient
+	var result map[string]interface{}
+	rpcClient := client.Client() // This gives us *rpc.Client
+
+	logutil.Infof("🔍 Tracing transaction: %s", txHash.Hex())
+
+	err := rpcClient.CallContext(
+		context.Background(),
+		&result,
+		"debug_traceTransaction",
+		txHash,
+		map[string]interface{}{}, // default config
+	)
 	if err != nil {
-		logutil.Errorf("Failed to fetch block by number: %v", err)
-		return
+		logutil.Errorf("❌ Failed to trace transaction: %v", err)
+		t.FailNow()
 	}
 
-	// Print block details
-	fmt.Printf("Block Details:\n")
-	fmt.Printf("  Block Number : %d\n", block.Number().Uint64())
-	fmt.Printf("  Block Hash   : %s\n", block.Hash().Hex())
-	fmt.Printf("  Parent Hash  : %s\n", block.ParentHash().Hex())
-	fmt.Printf("  Gas Used     : %d\n", block.GasUsed())
-	fmt.Printf("  Gas Limit    : %d\n", block.GasLimit())
-	fmt.Printf("  Transactions : %d\n", len(block.Transactions()))
-
-	fmt.Println("Transaction Details:")
-
-	// Iterate through all transactions
-	for _, tx := range block.Transactions() {
-		// Print transaction hash and basic details
-		fmt.Printf("  TX Hash: %s\n", tx.Hash().Hex())
-		if tx.To() == nil {
-			fmt.Printf("    Contract Creation: true\n")
-		} else {
-			fmt.Printf("    To: %s\n", tx.To().Hex())
-		}
-		fmt.Printf("    Nonce: %d, Gas: %d, Value: %d\n", tx.Nonce(), tx.Gas(), tx.Value())
-
-		// Fetch and analyze transaction receipt
-		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
-		if err != nil {
-			logutil.Errorf("Failed to fetch receipt for TX: %s, error: %v", tx.Hash().Hex(), err)
-			continue
-		}
-
-		// Print receipt details
-		fmt.Printf("    Receipt Details:\n")
-		fmt.Printf("      Status       : %d (1 = Success, 0 = Failure)\n", receipt.Status)
-		fmt.Printf("      Gas Used     : %d\n", receipt.GasUsed)
-		fmt.Printf("      Contract Addr: %s\n", receipt.ContractAddress.Hex())
-		fmt.Printf("      Logs Count   : %d\n", len(receipt.Logs))
-
-		// Analyze logs, if any
-		if len(receipt.Logs) > 0 {
-			fmt.Println("      Logs:")
-			for i, receiptLog := range receipt.Logs {
-				fmt.Printf("        Log #%d: Address=%s, Topics=%v\n", i+1, receiptLog.Address.Hex(), receiptLog.Topics)
-			}
-		} else {
-			fmt.Println("      No Logs Recorded.")
-		}
-
-		// If status is 0 (failed/reverted), attempt to decode revert reason
-		if receipt.Status == 0 && tx.To() == nil {
-			fmt.Println("      Transaction Status is 0. Checking for Reason...")
-			revertReason, err := fetchRevertReason(client, tx)
-			if err != nil {
-				fmt.Printf("        Failed to fetch reason: %v\n", err)
-			} else {
-				fmt.Printf("         Reason: %s\n", revertReason)
-			}
-		}
+	// 🧠 Print high-level info
+	if output, ok := result["output"]; ok {
+		logutil.Infof("🧾 Output: %v", output)
 	}
-}
-
-func fetchRevertReason(client *ethclient.Client, tx *types.Transaction) (string, error) {
-	// Get the `From` address of the transaction (must resolve the sender)
-	msgSender, err := resolveAddress(client, tx)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve 'From' address: %v", err)
+	if failed, ok := result["failed"]; ok {
+		logutil.Infof("💥 Failed: %v", failed)
 	}
 
-	fmt.Printf("    Sender: %s\n", msgSender.Hex())
-
-	// Build a CallMsg to simulate the transaction
-	msg := ethereum.CallMsg{
-		From: msgSender,
-		To:   tx.To(),
-		Data: tx.Data(),
-		Gas:  tx.Gas(),
-	}
-
-	// Simulate the call to obtain the revert reason
-	revertData, err := client.CallContract(context.Background(), msg, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to simulate transaction: %v", err)
-	}
-
-	// Check if returned data contains the Error(string) selector (0x08c379a0)
-	if len(revertData) < 4 || !bytes.Equal(revertData[:4], []byte{0x08, 0xc3, 0x79, 0xa0}) {
-		return "", fmt.Errorf("failed to fetch revert reason: no valid error selector found")
-	}
-
-	// Decode the revert reason (skip the first 4 bytes for the selector)
-	revertReason, err := abiStringDecode(revertData[4:])
-	if err != nil {
-		return "", fmt.Errorf("failed to decode revert reason: %v", err)
-	}
-
-	return revertReason, nil
-}
-
-func resolveAddress(client *ethclient.Client, tx *types.Transaction) (common.Address, error) {
-	chainID, err := client.NetworkID(context.Background())
-	if err != nil {
-		return common.Address{}, fmt.Errorf("failed to fetch chain ID: %v", err)
-	}
-
-	fmt.Printf("    TxType %d\n", tx.Type())
-	// Use the transaction's specific signer type
-	//var signer types.Signer
-	//switch tx.Type() {
-	//case types.LegacyTxType:
-	//	signer = types.HomesteadSigner{}
-	//case types.AccessListTxType, types.DynamicFeeTxType:
-	//	signer = types.NewEIP155Signer(chainID)
-	//default:
-	//	return common.Address{}, fmt.Errorf("transaction type not supported")
-	//}
-
-	signer := types.NewEIP155Signer(chainID)
-
-	from, err := signer.Sender(tx)
-	if err != nil {
-		return common.Address{}, fmt.Errorf("failed to resolve sender: %v", err)
-	}
-	fmt.Printf("    Sender: %s\n", from.Hex())
-
-	return from, nil
-}
-
-func abiStringDecode(data []byte) (string, error) {
-	// Check if the input starts with the `Error(string)` selector
-	if len(data) < 4 || !bytes.Equal(data[:4], []byte{0x08, 0xc3, 0x79, 0xa0}) {
-		return "", fmt.Errorf("invalid data format or does not contain error selector")
-	}
-
-	// Extract ABI-encoded string (skip selector: first 4 bytes)
-	encodedString := data[4:]
-
-	// Define the string type in the ABI format
-	stringType, err := abi.NewType("string", "string", nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create ABI string type: %v", err)
-	}
-
-	arguments := abi.Arguments{{Type: stringType}}
-
-	// Decode the encoded string
-	unpacked, err := arguments.Unpack(encodedString)
-	if err != nil {
-		return "", fmt.Errorf("failed to unpack ABI-encoded string: %v", err)
-	}
-
-	// Ensure the unpacked data contains the string
-	if len(unpacked) != 1 {
-		return "", fmt.Errorf("unexpected unpacked data length: %d", len(unpacked))
-	}
-
-	// Convert to the string and return
-	revertReason, ok := unpacked[0].(string)
-	if !ok {
-		return "", fmt.Errorf("decoded data is not a string")
-	}
-
-	return revertReason, nil
+	// 🧬 Optional: full dump
+	traceBytes, _ := json.MarshalIndent(result, "", "  ")
+	logutil.Infof("🧬 Full Trace:\n%s", string(traceBytes))
 }

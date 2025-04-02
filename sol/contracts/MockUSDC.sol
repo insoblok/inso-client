@@ -13,9 +13,13 @@ contract MockUSDC {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    constructor(uint256 initialSupply) {
-        balanceOf[msg.sender] = initialSupply;
-        totalSupply = initialSupply;
+    constructor() {
+        _init(msg.sender, 1_000_000 * (10 ** uint256(decimals)));
+    }
+
+    function _init(address owner, uint256 amount) internal {
+        balanceOf[owner] = amount;
+        totalSupply = amount;
     }
 
     function transfer(address to, uint256 amount) public returns (bool) {
