@@ -13,11 +13,25 @@ contract MockUSDC {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
+    // 🧪 Debug events
+    event Debug(string message);
+
     constructor() {
-        uint256 initialSupply = 1_000_000 * 1e6; // avoid runtime `**` computation
+        emit Debug("Start constructor");
+
+        uint256 initialSupply = 1_000_000 * 1e6;
+        emit Debug("Initial supply calculated");
+
         balanceOf[msg.sender] = initialSupply;
+        emit Debug("Balance assigned to msg.sender");
+
         totalSupply = initialSupply;
+        emit Debug("Total supply set");
+
         emit Transfer(address(0), msg.sender, initialSupply);
+        emit Debug("Transfer event emitted");
+
+        emit Debug("Constructor done");
     }
 
     function transfer(address to, uint256 amount) public returns (bool) {

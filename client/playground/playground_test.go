@@ -13,6 +13,7 @@ import (
 	toytypes "eth-toy-client/core/types"
 	"eth-toy-client/sol/out/counter"
 	"fmt"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -446,4 +447,76 @@ func TestDebugTraceTransaction(t *testing.T) {
 	// 🧬 Optional: full dump
 	traceBytes, _ := json.MarshalIndent(result, "", "  ")
 	logutil.Infof("🧬 Full Trace:\n%s", string(traceBytes))
+}
+
+func TestTraceFailedDeployment(t *testing.T) {
+	urls := devutil.GetUrls()
+	client, _, _, _ := MustGet(t, urls)
+	defer client.Close()
+
+	txHash := common.HexToHash("0xd9f86c52a716ac4182f8b3629d1f85f4c57950485e6f8e1598202add7a890fa6")
+
+	var result map[string]interface{}
+	rpcClient := client.Client()
+
+	logutil.Infof("🔍 Tracing transaction: %s", txHash.Hex())
+
+	err := rpcClient.CallContext(
+		context.Background(),
+		&result,
+		"debug_traceTransaction",
+		txHash,
+		map[string]interface{}{}, // default config
+	)
+	if err != nil {
+		logutil.Errorf("❌ Trace failed: %v", err)
+		t.FailNow()
+	}
+
+	// 🧾 Inspect logs emitted
+	if logs, ok := result["structLogs"]; ok {
+		logutil.Infof("📜 structLogs present with %d entries", len(logs.([]interface{})))
+	}
+
+	traceBytes, _ := json.MarshalIndent(result, "", "  ")
+	logutil.Infof("🧬 Full Trace:\n%s", string(traceBytes))
+}
+
+func TestGetDeploymentLogs(t *testing.T) {
+	urls := devutil.GetUrls()
+	client, _, _, _ := MustGet(t, urls)
+	defer client.Close()
+
+	// Replace with your deployment tx hash
+	txHash := common.HexToHash("0xd9f86c52a716ac4182f8b3629d1f85f4c57950485e6f8e1598202add7a890fa6")
+
+	// First: Get receipt to know block number
+	receipt, err := client.TransactionReceipt(context.Background(), txHash)
+	if err != nil {
+		t.Fatalf("❌ Failed to get receipt: %v", err)
+	}
+	blockNum := receipt.BlockNumber
+
+	// Second: Filter logs in that block
+	query := ethereum.FilterQuery{
+		FromBlock: blockNum,
+		ToBlock:   blockNum,
+	}
+
+	logs, err := client.FilterLogs(context.Background(), query)
+	if err != nil {
+		t.Fatalf("❌ Failed to get logs: %v", err)
+	}
+
+	// Third: Display logs
+	if len(logs) == 0 {
+		logutil.Warnf("🫥 No logs found in block #%d", blockNum.Uint64())
+	} else {
+		logutil.Infof("📝 Found %d logs in block #%d", len(logs), blockNum.Uint64())
+		for i, logEntry := range logs {
+			logutil.Infof("🔹 Log %d: Contract=%s", i, logEntry.Address.Hex())
+			logutil.Infof("   ➤ Topics: %v", logEntry.Topics)
+			logutil.Infof("   ➤ Data  : %x", logEntry.Data)
+		}
+	}
 }

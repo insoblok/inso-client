@@ -105,8 +105,7 @@ func StartDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
 		config.GethCmd,
 		"--dev",
 		"--http",
-		"--verbosity", "4",
-		"--http.api", "eth,net,web3,personal,debug",
+		"--http.api", "eth,net,web3,personal",
 		"--http.addr", "127.0.0.1",
 		"--http.port", config.RPCPort,
 	)
