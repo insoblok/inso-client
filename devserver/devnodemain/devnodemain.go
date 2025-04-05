@@ -22,7 +22,6 @@ func main() {
 
 	devNodeConfig := devnode.DevNodeConfig{
 		RPCPort: port,
-		GethCmd: "/Users/iyadi/github/ethereum/go-ethereum/build/bin/geth",
 	}
 	rpcClient, ready, err := devnode.StartDevNode(devNodeConfig)
 	if err != nil {

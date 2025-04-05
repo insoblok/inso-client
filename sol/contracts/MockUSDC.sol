@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 contract MockUSDC {
-    string private name = "Mock USD Coin";
+    string public name = "Mock USD Coin";
     string private symbol = "USDC";
     uint8 private decimals = 6;
     uint256 private totalSupply;
@@ -34,13 +34,13 @@ contract MockUSDC {
         emit Debug("Constructor done");
     }
 
-    function transfer(address to, uint256 amount) public returns (bool) {
-        require(balanceOf[msg.sender] >= amount, "Insufficient balance");
-        balanceOf[msg.sender] -= amount;
-        balanceOf[to] += amount;
-        emit Transfer(msg.sender, to, amount);
-        return true;
-    }
+//    function transfer(address to, uint256 amount) public returns (bool) {
+//        require(balanceOf[msg.sender] >= amount, "Insufficient balance");
+//        balanceOf[msg.sender] -= amount;
+//        balanceOf[to] += amount;
+//        emit Transfer(msg.sender, to, amount);
+//        return true;
+//    }
 
 //    function approve(address spender, uint256 amount) public returns (bool) {
 //        allowance[msg.sender][spender] = amount;

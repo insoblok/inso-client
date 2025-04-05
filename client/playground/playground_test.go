@@ -454,7 +454,7 @@ func TestTraceFailedDeployment(t *testing.T) {
 	client, _, _, _ := MustGet(t, urls)
 	defer client.Close()
 
-	txHash := common.HexToHash("0xd9f86c52a716ac4182f8b3629d1f85f4c57950485e6f8e1598202add7a890fa6")
+	txHash := common.HexToHash("0x25e96caef052cbfb3c24ddf9a5f7f5a2581e7a58082a2a82857db8f51957a7e9")
 
 	var result map[string]interface{}
 	rpcClient := client.Client()

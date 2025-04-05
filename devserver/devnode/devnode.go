@@ -13,8 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"log"
 	"math/big"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -92,35 +90,10 @@ func PingDevNode(rpcClient *rpc.Client) bool {
 }
 
 type DevNodeConfig struct {
-	GethCmd string
 	RPCPort string
 }
 
-// StartDevNode launches the Geth dev node and returns:
-// - rpcClient: the connected RPC client
-// - ready: a channel that is closed when the node is ready
-// - err: any immediate startup error
 func StartDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
-	cmd := exec.Command(
-		config.GethCmd,
-		"--dev",
-		"--http",
-		"--http.api", "eth,net,web3,personal",
-		"--http.addr", "127.0.0.1",
-		"--http.port", config.RPCPort,
-	)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	log.Printf("🚀 Starting Geth dev node on port %s...", config.RPCPort)
-	if err := cmd.Start(); err != nil {
-		return nil, nil, err
-	}
-
-	// Caller can decide to clean this up
-	go func() { _ = cmd.Wait() }()
-
-	// Connect once and keep trying until ping works
 	client, err := rpc.Dial("http://localhost:" + config.RPCPort)
 	if err != nil {
 		return nil, nil, err

@@ -156,7 +156,7 @@ func signTxHandler(rpcPort string, accounts *map[string]*TestAccount) http.Handl
 			Nonce:     nonce,
 			GasTipCap: big.NewInt(1),
 			GasFeeCap: big.NewInt(1e9),
-			Gas:       21_000,
+			Gas:       1_500_000,
 			To:        &toAddr,
 			Value:     value,
 		})
@@ -228,7 +228,7 @@ func handleSendTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 			Nonce:     nonce,
 			GasTipCap: big.NewInt(1),
 			GasFeeCap: big.NewInt(1e9),
-			Gas:       21_000,
+			Gas:       1_500_000,
 			To:        &toAcc.Address,
 			Value:     value,
 		})
@@ -349,7 +349,7 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 				return
 			}
 
-			logutil.Infof("Received Req Bin data: %s", req.Data)
+			//logutil.Infof("Received Req Bin data: %s", req.Data)
 			dataBytes := []byte(req.Data)
 
 			fmt.Println("Length after []byte(req.Data):", len(dataBytes)) // server
