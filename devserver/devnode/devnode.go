@@ -1,15 +1,12 @@
 package devnode
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"log"
 	"math/big"
@@ -183,18 +180,4 @@ func SignTx(chainID ChainId, rawTx *types.Transaction, key *ecdsa.PrivateKey) (*
 		singer,
 		signature)
 
-}
-
-// RlpEncodeBytes returns raw RLP-encoded tx bytes
-func RlpEncodeBytes(tx *types.Transaction) []byte {
-	var buf bytes.Buffer
-	if err := rlp.Encode(&buf, tx); err != nil {
-		log.Fatalf("❌ Failed to RLP-encode tx: %v", err)
-	}
-	return buf.Bytes()
-}
-
-// RlpEncodeHex returns the RLP-encoded tx as hex string (0x-prefixed)
-func RlpEncodeHex(tx *types.Transaction) string {
-	return "0x" + hex.EncodeToString(RlpEncodeBytes(tx))
 }
