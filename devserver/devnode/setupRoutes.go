@@ -364,9 +364,16 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 				logutil.Warnf("⚠️  Checksum mismatch! Possible corruption or encoding error")
 			}
 
-			dataBytes, _ = hex.DecodeString(req.Data)
 			toAddr = nil
-			data = dataBytes
+			rawByte := []byte(req.Data)
+			if (len(rawByte) % 2) == 1 {
+				rawByte = append([]byte("0"), rawByte...)
+			}
+
+			destHexByte := make([]byte, len(rawByte)/2)
+			hex.Decode(destHexByte, rawByte)
+			data = destHexByte
+			logutil.Infof("Hex Bytes Length: %d", len(data))
 
 		} else {
 			// 🔁 Normal Transfer

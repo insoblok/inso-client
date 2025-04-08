@@ -19,6 +19,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+type ChainId *big.Int
+type Nonce *big.Int
+
 type TestAccount struct {
 	Address common.Address
 	Name    string
@@ -160,13 +163,26 @@ func BuildAndSignTx(
 		Data:      data, // 🧠 smart contract bytecode or calldata
 	})
 
-	signer := types.NewLondonSigner(chainID)
-	signedTx, err := types.SignTx(tx, signer, privKey)
+	signedTx, err := SignTx(chainID, tx, privKey)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to sign tx: %w", err)
 	}
 
 	return tx, signedTx, nil
+}
+
+func SignTx(chainID ChainId, rawTx *types.Transaction, key *ecdsa.PrivateKey) (*types.Transaction, error) {
+	singer := types.NewPragueSigner(chainID)
+	digest := singer.Hash(rawTx).Bytes()
+	fmt.Printf("🦄 digestLength: %x\n", len(digest))
+	signature, err := crypto.Sign(digest, key)
+	if err != nil {
+		return nil, err
+	}
+	return rawTx.WithSignature(
+		singer,
+		signature)
+
 }
 
 // RlpEncodeBytes returns raw RLP-encoded tx bytes
