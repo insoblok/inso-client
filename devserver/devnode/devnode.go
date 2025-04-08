@@ -13,8 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"log"
 	"math/big"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -162,7 +160,7 @@ func BuildAndSignTx(
 		Gas:       uint64(3000000),           // ⛽ for deployment or interaction
 		To:        to,
 		Value:     big.NewInt(0),
-		Data:      getMockUsdc(), // 🧠 smart contract bytecode or calldata
+		Data:      data, // 🧠 smart contract bytecode or calldata
 	})
 
 	signedTx, err := SignTx(chainID, tx, privKey)
@@ -185,24 +183,6 @@ func SignTx(chainID ChainId, rawTx *types.Transaction, key *ecdsa.PrivateKey) (*
 		singer,
 		signature)
 
-}
-
-type HexBytes []byte
-
-func GetAbiBin(dir string, contract string) HexBytes {
-	binPath := filepath.Join(dir, contract+".bin")
-	rawByte, _ := os.ReadFile(binPath)
-	if (len(rawByte) % 2) == 1 {
-		rawByte = append([]byte("0"), rawByte...)
-	}
-	destHexByte := make([]byte, len(rawByte)/2)
-	hex.Decode(destHexByte, rawByte)
-
-	return destHexByte
-}
-
-func getMockUsdc() HexBytes {
-	return GetAbiBin("/Users/iyadi/playground/bindvsmanual/mockusdc", "MockUSDC")
 }
 
 // RlpEncodeBytes returns raw RLP-encoded tx bytes
