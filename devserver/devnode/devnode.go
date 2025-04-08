@@ -1,12 +1,15 @@
 package devnode
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"log"
 	"math/big"
@@ -154,7 +157,7 @@ func BuildAndSignTx(
 		Nonce:     nonce,
 		GasTipCap: big.NewInt(1),
 		GasFeeCap: big.NewInt(1_000_000_000), // 1 gwei
-		Gas:       uint64(3000000),           // ⛽ for deployment or interaction
+		Gas:       3_000_000,                 // ⛽ for deployment or interaction
 		To:        to,
 		Value:     big.NewInt(0),
 		Data:      data, // 🧠 smart contract bytecode or calldata
@@ -180,4 +183,18 @@ func SignTx(chainID ChainId, rawTx *types.Transaction, key *ecdsa.PrivateKey) (*
 		singer,
 		signature)
 
+}
+
+// RlpEncodeBytes returns raw RLP-encoded tx bytes
+func RlpEncodeBytes(tx *types.Transaction) []byte {
+	var buf bytes.Buffer
+	if err := rlp.Encode(&buf, tx); err != nil {
+		log.Fatalf("❌ Failed to RLP-encode tx: %v", err)
+	}
+	return buf.Bytes()
+}
+
+// RlpEncodeHex returns the RLP-encoded tx as hex string (0x-prefixed)
+func RlpEncodeHex(tx *types.Transaction) string {
+	return "0x" + hex.EncodeToString(RlpEncodeBytes(tx))
 }
