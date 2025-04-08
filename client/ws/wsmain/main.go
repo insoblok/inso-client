@@ -69,6 +69,10 @@ func handleLog(parsedABI *accabi.ABI, vLog types.Log) {
 			}
 
 			fmt.Printf("📢 Event: %s\n", name)
+			fmt.Printf("   Block: %d\n", vLog.BlockNumber)
+			fmt.Printf("   Tx: %s\n", vLog.TxHash.Hex())
+			fmt.Printf("   Log: %s\n", vLog.Index)
+			fmt.Printf("   Contract:%s\n", vLog.Address.Hex())
 			for k, v := range out {
 				fmt.Printf("   %s: %v\n", k, v)
 			}
