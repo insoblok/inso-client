@@ -1,4 +1,4 @@
-package devnode
+package devserver
 
 import (
 	contract "eth-toy-client/core/contracts"

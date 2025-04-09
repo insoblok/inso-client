@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	contract "eth-toy-client/core/contracts"
-	"eth-toy-client/devserver/devnode"
+	"eth-toy-client/devserver/devserver"
 	"flag"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,10 +20,10 @@ func main() {
 	flag.StringVar(&serverPort, "serverPort", "8888", "HTTP RPC port for the supporting server")
 	flag.Parse()
 
-	devNodeConfig := devnode.DevNodeConfig{
+	devNodeConfig := devserver.DevNodeConfig{
 		RPCPort: port,
 	}
-	rpcClient, ready, err := devnode.StartDevNode(devNodeConfig)
+	rpcClient, ready, err := devserver.StartDevNode(devNodeConfig)
 	if err != nil {
 		log.Fatalf("Error starting dev node: %v", err)
 	}
@@ -51,14 +51,14 @@ func main() {
 		fmt.Printf("💰 Balance: %s wei\n", bal.String())
 	}
 
-	testAccount := devnode.LoadTestAccounts()
-	fundedAccounts := devnode.FundTestAccounts(devAddr, rpcClient, testAccount)
+	testAccount := devserver.LoadTestAccounts()
+	fundedAccounts := devserver.FundTestAccounts(devAddr, rpcClient, testAccount)
 
 	go func() {
 		log.Println("🌐 Supporting HTTP server listening at http://localhost:" + serverPort + "...")
 		err := http.ListenAndServe(
 			":"+serverPort,
-			devnode.SetupRoutes(contract.NewRegistry(), devAddr, port, fundedAccounts))
+			devserver.SetupRoutes(contract.NewRegistry(), devAddr, port, fundedAccounts))
 		if err != nil {
 			log.Fatalf("❌ Failed to start HTTP server: %v", err)
 		}

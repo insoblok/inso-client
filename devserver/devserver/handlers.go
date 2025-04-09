@@ -1,4 +1,4 @@
-package devnode
+package devserver
 
 import (
 	"bytes"
