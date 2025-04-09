@@ -96,7 +96,7 @@ type DevNodeConfig struct {
 	RPCPort string
 }
 
-func StartDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
+func ConnectToDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
 	client, err := rpc.Dial("http://localhost:" + config.RPCPort)
 	if err != nil {
 		return nil, nil, err

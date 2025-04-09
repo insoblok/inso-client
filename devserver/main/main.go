@@ -23,7 +23,7 @@ func main() {
 	devNodeConfig := devserver.DevNodeConfig{
 		RPCPort: port,
 	}
-	rpcClient, ready, err := devserver.StartDevNode(devNodeConfig)
+	rpcClient, ready, err := devserver.ConnectToDevNode(devNodeConfig)
 	if err != nil {
 		log.Fatalf("Error starting dev node: %v", err)
 	}
