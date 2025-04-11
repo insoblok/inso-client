@@ -31,6 +31,13 @@ func NewLogBroadcaster() LogBroadcaster {
 func (b *inMemoryBroadcaster) Subscribe(ch chan<- LogEvent) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
+	for _, sub := range b.subscribers {
+		if sub == ch {
+			panic("channel already subscribed") // or return an error/log
+		}
+	}
+
 	b.subscribers = append(b.subscribers, ch)
 }
 
