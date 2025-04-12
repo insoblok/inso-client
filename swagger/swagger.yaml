@@ -87,4 +87,29 @@ paths:
         '500':
           description: Internal server error
 
-
+  /info:
+    get:
+      summary: Get server info
+      description: Retrieve information about the DevServer including RPC URL, port, and account count.
+      operationId: getInfo
+      tags:
+        - info
+      responses:
+        '200':
+          description: Information about the DevServer.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rpcUrl:
+                    type: string
+                    example: "http://localhost:8545"
+                  rpcPort:
+                    type: string
+                    example: "8545"
+                  accountsCount:
+                    type: integer
+                    example: 10
+        '500':
+          description: Internal server error
