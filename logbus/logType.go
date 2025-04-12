@@ -1,9 +1,12 @@
 package logbus
 
-// LogType defines a custom type for different types of logs.
+import (
+	"github.com/ethereum/go-ethereum/core/types"
+	"strings"
+)
+
 type LogType string
 
-// Constants for different Log Types
 const (
 	TransactionLog      LogType = "Transaction Log"
 	EventLog            LogType = "Event Log"
@@ -12,9 +15,9 @@ const (
 	StateChangeLog      LogType = "Internal State Change"
 	ErrorLog            LogType = "Error Log"
 	InternalTransaction LogType = "Internal Transaction"
+	UnknownEventLog     LogType = "Unknown Event Log"
 )
 
-// LogTypeDetails provides a description of how each log type is generated
 func LogTypeDetails(logType LogType) string {
 	switch logType {
 	case TransactionLog:
@@ -32,6 +35,55 @@ func LogTypeDetails(logType LogType) string {
 	case InternalTransaction:
 		return "Generated when contracts make calls to other contracts or accounts. No ABI required, but tools needed to capture."
 	default:
-		return "Unknown log type."
+		return string(UnknownEventLog)
 	}
+}
+
+// GetLogType analyzes the log and returns its type based on the topics and data
+func GetLogType(log types.Log) LogType {
+	// Check if the first topic matches an ERC20 Transfer event signature
+	if len(log.Topics) > 0 {
+		// ERC20 Transfer event signature (can be matched using the first topic)
+		erc20TransferSignature := "Transfer(address,address,uint256)"
+		if log.Topics[0].Hex() == erc20TransferSignature {
+			return TokenTransferLog // ERC20 Transfer event
+		}
+
+		// ERC721 Transfer event signature (for ERC721 token transfers)
+		erc721TransferSignature := "Transfer(address,address,uint256)"
+		if log.Topics[0].Hex() == erc721TransferSignature {
+			return TokenTransferLog // ERC721 Transfer event (same signature as ERC20 in most cases)
+		}
+
+		// Example: Custom contract events with their specific signature
+		customEventSignature := "CustomEvent(address,uint256)"
+		if log.Topics[0].Hex() == customEventSignature {
+			return CustomContractEvent // Custom contract event
+		}
+	}
+
+	// Check if the log is related to a transaction (no topics means it's a transaction log)
+	if len(log.Topics) == 0 {
+		return TransactionLog // Transaction-related log
+	}
+
+	// State Change log: Some logs represent internal state changes in the contract
+	// This is generally harder to detect directly, but we can assume based on the topic
+	// for now, or mark them as state change logs
+	if strings.Contains(log.TxHash.Hex(), "state-change") {
+		return StateChangeLog // Internal state change event
+	}
+
+	// Internal Transaction log: These logs are related to internal contract calls
+	if strings.Contains(log.TxHash.Hex(), "internal-transaction") {
+		return InternalTransaction // Internal transaction event
+	}
+
+	// Error Logs: Logs that indicate an error or failure in the contract execution
+	if len(log.Topics) > 0 && strings.Contains(log.Topics[0].Hex(), "error") {
+		return ErrorLog // Error event
+	}
+
+	// Default to Unknown Event Log for unrecognized logs
+	return UnknownEventLog // Unknown or unhandled event
 }

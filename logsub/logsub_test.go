@@ -56,3 +56,29 @@ func TestLogListenerWithPrintToConsole(t *testing.T) {
 	time.Sleep(300 * time.Second)
 
 }
+
+func TestLogListenerWithDecoders(t *testing.T) {
+	broadcaster := logbus.NewLogBroadcaster()
+
+	chConsole := make(chan logbus.LogEvent, 10)
+	consoleConsumer := &PrintToConsole{Name: "ConsoleConsumer", Events: chConsole}
+
+	go consoleConsumer.Consume()
+
+	broadcaster.Subscribe(chConsole)
+
+	config := &ListenerConfig{WebSocketURL: "ws://localhost:8546"}
+	decoder := &DefaultDecoder{
+		DecoderFn: GetDecoderFn(),
+	}
+
+	listener, err := NewLogListener(config, broadcaster, decoder)
+	if err != nil {
+		t.Fatalf("❌ Failed to create LogListener: %v", err)
+	}
+
+	go listener.Listen(context.Background())
+
+	time.Sleep(300 * time.Second)
+
+}

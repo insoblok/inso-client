@@ -3,6 +3,7 @@ package logsub
 import (
 	"context"
 	"eth-toy-client/logbus"
+	"fmt"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -146,26 +147,102 @@ func (p *PrintToConsole) Consume() {
 	}
 }
 
-// Decoder interface that needs to be implemented for decoding logs
 type Decoder interface {
 	DecodeLog(log types.Log) (logbus.LogEvent, error) // Decodes a log into a LogEvent
 }
 
-// DefaultDecoder is the default implementation of the Decoder interface
-type DefaultDecoder struct{}
+type DefaultDecoder struct {
+	DecoderFn func(logType logbus.LogType) (Decoder, error)
+}
 
-// DecodeLog is the default method that simply converts the log into a generic LogEvent
 func (d *DefaultDecoder) DecodeLog(log types.Log) (logbus.LogEvent, error) {
-	// For now, assume generic event with no ABI decoding
-	event := logbus.LogEvent{
+	logType := logbus.GetLogType(log)
+
+	decoder, err := d.DecoderFn(logType)
+	if err != nil {
+		return d.decodeGenericLog(log)
+	}
+
+	return decoder.DecodeLog(log)
+}
+
+func (d *DefaultDecoder) decodeGenericLog(log types.Log) (logbus.LogEvent, error) {
+	return logbus.LogEvent{
 		Contract:  log.Address.Hex(),
-		Event:     "UnknownEventForNow", // Assume an unknown event
+		Event:     "UnknownEvent",
 		TxHash:    log.TxHash.Hex(),
 		Block:     log.BlockNumber,
 		Timestamp: time.Now().Unix(),
-		Args:      make(map[string]interface{}), // Empty args for now
-	}
+		Args:      make(map[string]interface{}),
+	}, nil
+}
 
-	// Return the generic event
-	return event, nil
+func NewDefaultDecoder(decoderFn func(logType logbus.LogType) (Decoder, error)) *DefaultDecoder {
+	return &DefaultDecoder{
+		DecoderFn: decoderFn,
+	}
+}
+
+type DecoderRegistry struct {
+	Decoders map[logbus.LogType]Decoder
+}
+
+func NewDecoderRegistry() *DecoderRegistry {
+	return &DecoderRegistry{
+		Decoders: make(map[logbus.LogType]Decoder),
+	}
+}
+
+func (r *DecoderRegistry) RegisterDecoder(logType logbus.LogType, decoder Decoder) {
+	r.Decoders[logType] = decoder
+}
+
+func (r *DecoderRegistry) GetDecoderFn() func(logType logbus.LogType) (Decoder, error) {
+	return func(logType logbus.LogType) (Decoder, error) {
+		decoder, exists := r.Decoders[logType]
+		if !exists {
+			return &DefaultDecoder{}, fmt.Errorf("no decoder found for log type: %v", logType)
+		}
+		return decoder, nil
+	}
+}
+
+func GetDecoderFn() func(logType logbus.LogType) (Decoder, error) {
+	decoderRegistry := NewDecoderRegistry()
+	decoderRegistry.RegisterDecoder(logbus.TransactionLog, &TransactionLogDecoder{})
+	decoderRegistry.RegisterDecoder(logbus.UnknownEventLog, &UnknownEventLogDecoder{})
+	return decoderRegistry.GetDecoderFn()
+}
+
+type TransactionLogDecoder struct{}
+type EventLogDecoder struct{}
+type TokenTransferLogDecoder struct{}
+type CustomContractEventDecoder struct{}
+type StateChangeLogDecoder struct{}
+type ErrorLogDecoder struct{}
+type InternalTransactionDecoder struct{}
+type UnknownEventLogDecoder struct{}
+
+func (t *TransactionLogDecoder) DecodeLog(log types.Log) (logbus.LogEvent, error) {
+	return logbus.LogEvent{
+		LogType:   logbus.TransactionLog,
+		Contract:  log.Address.Hex(),
+		Event:     "TransactionLog",
+		TxHash:    log.TxHash.Hex(),
+		Block:     log.BlockNumber,
+		Timestamp: time.Now().Unix(),
+		Args:      make(map[string]interface{}),
+	}, nil
+}
+
+func (t *UnknownEventLogDecoder) DecodeLog(log types.Log) (logbus.LogEvent, error) {
+	return logbus.LogEvent{
+		LogType:   logbus.UnknownEventLog,
+		Contract:  log.Address.Hex(),
+		Event:     "UnknownEventLog",
+		TxHash:    log.TxHash.Hex(),
+		Block:     log.BlockNumber,
+		Timestamp: time.Now().Unix(),
+		Args:      make(map[string]interface{}),
+	}, nil
 }
