@@ -1,9 +1,14 @@
 package logsub
 
 import (
+	"context"
 	"eth-toy-client/logbus"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
+	"time"
 )
 
 type ListenerConfig struct {
@@ -29,7 +34,50 @@ func NewLogListener(config *ListenerConfig, broadcaster logbus.LogBroadcaster) (
 	}, nil
 }
 
-func (l *LogListener) StartListening() {
+func (l *LogListener) Listen(ctx context.Context) {
+	log.Printf("✅ LogListener started. Listening for logs...")
+
+	// Example log filter: change as needed
+	filter := ethereum.FilterQuery{
+		Addresses: []common.Address{}, // Empty list means all contracts
+	}
+
+	logs := make(chan types.Log)
+
+	sub, err := l.Client.SubscribeFilterLogs(ctx, filter, logs)
+	if err != nil {
+		log.Fatalf("❌ Failed to subscribe to logs: %v", err)
+	}
+
+	for {
+		select {
+		case logEvent := <-logs:
+			// Print the received log to console
+			log.Printf("🎤 Received Log: %v", logEvent)
+
+			// Convert the Ethereum log into a LogEvent
+			event := logbus.LogEvent{
+				Contract:  logEvent.Address.Hex(),
+				Event:     "UnknownEventForNow", // For now, assume generic event
+				TxHash:    logEvent.TxHash.Hex(),
+				Block:     logEvent.BlockNumber,
+				Timestamp: time.Now().Unix(),
+				Args:      make(map[string]interface{}), // Just an empty map for now
+			}
+
+			// Publish this log event to LogBroadcaster
+			l.Broadcaster.Publish(event)
+		case err := <-sub.Err():
+			log.Printf("⚠️ Subscription error: %v", err)
+
+		case <-ctx.Done():
+			log.Println("👋 LogListener exiting...")
+			return
+		}
+	}
+}
+
+func (l *LogListener) StartSimulateListening() {
 	// Here you would start the actual logic for listening to the Ethereum logs
 	// This will involve setting up log filters, subscribing to logs, etc.
 

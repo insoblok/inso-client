@@ -1,13 +1,14 @@
 package logsub
 
 import (
+	"context"
 	"eth-toy-client/logbus"
 	"log"
 	"testing"
 	"time"
 )
 
-func TestLogListenerWithPrintToConsole(t *testing.T) {
+func TestLogSimulateListenerWithPrintToConsole(t *testing.T) {
 	broadcaster := logbus.NewLogBroadcaster()
 
 	config := &ListenerConfig{
@@ -26,9 +27,31 @@ func TestLogListenerWithPrintToConsole(t *testing.T) {
 
 	broadcaster.Subscribe(consoleChannel)
 
-	go listener.StartListening()
+	go listener.StartSimulateListening()
 
 	time.Sleep(5 * time.Second)
 
 	log.Printf("🐳 Done")
+}
+
+func TestLogListenerWithPrintToConsole(t *testing.T) {
+	broadcaster := logbus.NewLogBroadcaster()
+
+	chConsole := make(chan logbus.LogEvent, 10)
+	consoleConsumer := &PrintToConsole{Name: "ConsoleConsumer", Events: chConsole}
+
+	go consoleConsumer.Consume()
+
+	broadcaster.Subscribe(chConsole)
+
+	config := &ListenerConfig{WebSocketURL: "ws://localhost:8546"}
+	listener, err := NewLogListener(config, broadcaster)
+	if err != nil {
+		t.Fatalf("❌ Failed to create LogListener: %v", err)
+	}
+
+	go listener.Listen(context.Background())
+
+	time.Sleep(300 * time.Second)
+
 }
