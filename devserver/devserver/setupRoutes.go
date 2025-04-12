@@ -2,6 +2,7 @@ package devserver
 
 import (
 	contract "eth-toy-client/core/contracts"
+	"eth-toy-client/swagger"
 	"github.com/ethereum/go-ethereum/common"
 	"net/http"
 )
@@ -25,6 +26,7 @@ func SetupRoutes(reg *contract.ContractRegistry, devAccount common.Address, rpcP
 	mux.HandleFunc("/api/register-alias", handleRegisterAlias(reg))
 	mux.HandleFunc("/api/contracts", handleGetContracts(reg))
 	mux.HandleFunc("/api/contracts/", handleGetContractByAlias(reg))
+	mux.HandleFunc("/swagger/", swagger.HandleSwagger)
 
 	return mux
 }
