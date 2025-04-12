@@ -1,7 +1,68 @@
 package logbus
 
-import "github.com/stretchr/testify/assert"
+import (
+	"fmt"
+	"github.com/stretchr/testify/assert"
+	"log"
+	"time"
+)
 import "testing"
+
+type Consumer struct {
+	Name             string        // Name of the consumer (used in logs)
+	Delay            time.Duration // Delay to simulate processing time
+	ConsumptionCount int           // Counter to track how many events the consumer processed
+	Channel          chan LogEvent // Channel to receive events
+}
+
+func startConsumer(name string, delay time.Duration, capacity int, done chan struct{}) *Consumer {
+	log.Printf("%s: Starting consumer with delay %v: seconds", name, delay.Seconds())
+	ch := make(chan LogEvent, capacity) // buffered channel with capacity for 1 event
+
+	// Start a goroutine for the consumer
+	go func() {
+		for {
+			select {
+			case event := <-ch:
+				log.Printf("✅ %s: Picked up event %s with TxHash: %s", name, event.Event, event.TxHash)
+				time.Sleep(delay) // simulate work (processing delay)
+				log.Printf("🧈 %s: Consumed event %s with TxHash: %s", name, event.Event, event.TxHash)
+			case <-done: // Close the goroutine once done channel is closed
+				log.Printf("%s: Exiting", name)
+				return
+			}
+		}
+	}()
+
+	return &Consumer{
+		Name:    name,
+		Delay:   delay,
+		Channel: ch,
+	}
+}
+
+// PublishEventsInLoop will publish events in a loop with a delay between each one.
+func PublishEventsInLoop(b LogBroadcaster, n int, waitTime time.Duration) {
+	for i := 0; i < n; i++ {
+		// Create an event with an incremented event number
+		event := LogEvent{
+			Event:  "Event",
+			TxHash: fmt.Sprintf("0x%x", i), // Unique txHash as a hex string
+		}
+
+		// Log the publishing of the event
+		log.Printf("🎤 Publishing event %d with TxHash: %s", i, event.TxHash)
+		b.Publish(event) // Publish to all subscribers
+
+		// Log the event publishing completion
+		log.Printf("🐳 Published event %d with TxHash: %s", i, event.TxHash)
+
+		// Wait for `waitTime` seconds before publishing the next event
+		time.Sleep(waitTime)
+	}
+}
+
+/////////////////////////////
 
 func TestBroadcastCreation(t *testing.T) {
 	b := NewLogBroadcaster() // ✅ returns interface
@@ -57,64 +118,75 @@ func TestMultipleSubscribers(t *testing.T) {
 func TestSlowSubscriberDoesNotBlockOthers(t *testing.T) {
 	b := NewLogBroadcaster()
 
-	chSlow := make(chan LogEvent, 1)
-	chFast := make(chan LogEvent, 2)
+	// Create done channel to notify when the consumers are done
+	done := make(chan struct{})
 
-	b.Subscribe(chSlow)
-	b.Subscribe(chFast)
+	// Create slow and fast consumers
+	chSlow := startConsumer("SlowConsumer", 10*time.Second, 1, done)
+	chFast := startConsumer("FastConsumer", 1*time.Second, 1, done)
 
+	b.Subscribe(chSlow.Channel)
+	b.Subscribe(chFast.Channel)
+
+	log.Printf("🎤 Publishing E1")
 	event1 := LogEvent{Event: "E1", TxHash: "0x1"}
+	b.Publish(event1) // Goes to both chSlow and chFast
+	log.Printf("🐳 Published E1")
+	// Allow some time for consumers to process the event
+	time.Sleep(2 * time.Second)
+
+	log.Printf("🎤 Publishing E2")
 	event2 := LogEvent{Event: "E2", TxHash: "0x2"}
-
-	// Publish event 1
-	b.Publish(event1) // goes to both
-	// Do not read from chSlow (simulate slow subscriber)
-
-	// Publish event 2
-	b.Publish(event2) // chSlow is full now, should skip, but chFast should get it
+	b.Publish(event2)
+	log.Printf("🐳Published E2")
 
 	// Allow chFast to receive event2
-	received := <-chFast // chFast should get event2
+	received := <-chFast.Channel // chFast should get event2
 	assert.Equal(t, "0x2", received.TxHash)
 
 	// Ensure chSlow is skipped and hasn't received anything
 	select {
-	case <-chSlow:
+	case <-chSlow.Channel:
 		t.Error("Expected chSlow to be skipped")
 	default:
 		// chSlow is expected to not receive anything
 	}
+
+	close(done)
 }
 
-func TestSlowSubscriberDoesNotBlockOthers2(t *testing.T) {
+func TestPublisherLoop(t *testing.T) {
 	b := NewLogBroadcaster()
 
-	chSlow := make(chan LogEvent, 1) // Slow subscriber with a buffer of 1
-	chFast := make(chan LogEvent, 2) // Fast subscriber with a buffer of 2
+	done := make(chan struct{})
+	chSlow := startConsumer("SlowConsumer", 5*time.Second, 1, done)
+	chFast := startConsumer("FastConsumer", 1*time.Second, 1, done)
 
-	b.Subscribe(chSlow)
-	b.Subscribe(chFast)
+	b.Subscribe(chSlow.Channel)
+	b.Subscribe(chFast.Channel)
 
-	// Event 1 - Publish to both channels
-	event1 := LogEvent{Event: "E1", TxHash: "0x1"}
-	b.Publish(event1) // Goes to both chSlow and chFast
+	PublishEventsInLoop(b, 5, 2*time.Second)
 
-	// Do not read from chSlow (simulate slow subscriber)
-	// chSlow now has event1 and is full
+	log.Printf("🛌 Publisher go to sleep for 60 seconds")
+	time.Sleep(60 * time.Second)
+	log.Printf("👋 App Exiting")
+	close(done)
+}
 
-	// Event 2 - Publish to both channels
-	event2 := LogEvent{Event: "E2", TxHash: "0x2"}
-	b.Publish(event2) // chSlow is full now, should skip, but chFast should get it
+func TestPublisherLoop2(t *testing.T) {
+	b := NewLogBroadcaster()
 
-	// Ensure that chFast receives event2
-	received := <-chFast
-	assert.Equal(t, "0x2", received.TxHash)
+	done := make(chan struct{})
+	chSlow := startConsumer("SlowConsumer", 10*time.Second, 5, done)
+	chFast := startConsumer("FastConsumer", 1*time.Second, 1, done)
 
-	// Ensure chSlow is skipped and hasn't received anything
-	select {
-	case <-chSlow:
-		t.Error("Expected chSlow to be skipped")
-	default:
-		// chSlow should not have received any events
-	}
+	b.Subscribe(chSlow.Channel)
+	b.Subscribe(chFast.Channel)
+
+	PublishEventsInLoop(b, 5, 2*time.Second)
+
+	log.Printf("🛌 Publisher go to sleep for 60 seconds")
+	time.Sleep(60 * time.Second)
+	log.Printf("👋 App Exiting")
+	close(done)
 }
