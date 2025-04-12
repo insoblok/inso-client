@@ -9,6 +9,7 @@ type LogEvent struct {
 	Block     uint64                 // Block number
 	Timestamp int64                  // Optional: unix time
 	Args      map[string]interface{} // Decoded args (message, value, etc.)
+	LogType   LogType                // Log type (Transaction, Event, etc.)
 }
 
 type LogBroadcaster interface {

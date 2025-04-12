@@ -15,7 +15,7 @@ func TestLogSimulateListenerWithPrintToConsole(t *testing.T) {
 		WebSocketURL: "ws://localhost:8546", // Change to actual WebSocket URL for the DevNode
 	}
 
-	listener, err := NewLogListener(config, broadcaster)
+	listener, err := NewLogListener(config, broadcaster, &DefaultDecoder{})
 	if err != nil {
 		t.Fatalf("Error creating LogListener: %v", err)
 	}
@@ -45,7 +45,8 @@ func TestLogListenerWithPrintToConsole(t *testing.T) {
 	broadcaster.Subscribe(chConsole)
 
 	config := &ListenerConfig{WebSocketURL: "ws://localhost:8546"}
-	listener, err := NewLogListener(config, broadcaster)
+	decoder := &DefaultDecoder{}
+	listener, err := NewLogListener(config, broadcaster, decoder)
 	if err != nil {
 		t.Fatalf("❌ Failed to create LogListener: %v", err)
 	}
