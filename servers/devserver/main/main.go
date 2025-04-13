@@ -19,7 +19,11 @@ func main() {
 
 type DevServer struct{}
 
-func (s *DevServer) InitService(nodeClient *servers.NodeClient, serverConfig servers.ServerConfig) (servers.ServerConfig, http.Handler) {
+func (devServer *DevServer) Name() string {
+	return "DevServer"
+}
+
+func (devServer *DevServer) InitService(nodeClient *servers.NodeClient, serverConfig servers.ServerConfig) (servers.ServerConfig, http.Handler) {
 	var accounts []string
 	err := nodeClient.RPCClient.Call(&accounts, "eth_accounts")
 	if err != nil || len(accounts) == 0 {

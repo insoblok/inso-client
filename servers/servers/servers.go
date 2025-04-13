@@ -73,8 +73,8 @@ type NodeClient struct {
 	RPCClient *rpc.Client
 }
 
-func EstablishConnectionToDevNode() (ServerConfig, *NodeClient) {
-	serverConfig := GetServerConfig("DevServer")
+func EstablishConnectionToDevNode(name string) (ServerConfig, *NodeClient) {
+	serverConfig := GetServerConfig(name)
 	log.Printf("📡 starting Server: %+v", serverConfig)
 	rpcClient, readyChannel, err := ConnectToDevNode(serverConfig.DevNodeConfig)
 	if err != nil {
@@ -98,11 +98,12 @@ func EstablishConnectionToDevNode() (ServerConfig, *NodeClient) {
 }
 
 type MicroService interface {
+	Name() string
 	InitService(nodeClient *NodeClient, serverConfig ServerConfig) (ServerConfig, http.Handler)
 }
 
 func StartMicroService(microService MicroService) {
-	serverConfig, nodeClient := EstablishConnectionToDevNode()
+	serverConfig, nodeClient := EstablishConnectionToDevNode(microService.Name())
 	defer nodeClient.Client.Close()
 	defer nodeClient.RPCClient.Close()
 	_, handler := microService.InitService(nodeClient, serverConfig)
