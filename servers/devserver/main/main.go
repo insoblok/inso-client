@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	contract "eth-toy-client/core/contracts"
-	"eth-toy-client/devserver/devserver"
+	"eth-toy-client/servers/devserver/devserver"
 	"flag"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
