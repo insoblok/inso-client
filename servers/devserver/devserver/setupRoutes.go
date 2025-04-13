@@ -1,6 +1,7 @@
 package devserver
 
 import (
+	"eth-toy-client/config"
 	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/servers/servers"
 	"eth-toy-client/swagger"
@@ -15,12 +16,14 @@ type accountResponse struct {
 }
 
 func SetupRoutes(
+	config config.ServerConfig,
 	reg *contract.ContractRegistry,
 	devAccount common.Address,
 	nodeClient *servers.NodeClient,
 	accounts *map[string]*TestAccount) *http.ServeMux {
 	mux := http.NewServeMux()
 
+	servers.SetupPingRoute(config.Name, mux)
 	mux.HandleFunc("/dev-account", handleDevAccounts(devAccount))
 	mux.HandleFunc("/accounts", handleAccounts(accounts))
 	mux.HandleFunc("/info", handleInfo(nodeClient, accounts))

@@ -42,6 +42,6 @@ func (devServer *DevServer) InitService(nodeClient *servers.NodeClient, serverCo
 
 	testAccount := devserver.LoadTestAccounts()
 	fundedAccounts := devserver.FundTestAccounts(devAddr, nodeClient.RPCClient, testAccount)
-	handler := devserver.SetupRoutes(contract.NewRegistry(), devAddr, nodeClient, fundedAccounts)
+	handler := devserver.SetupRoutes(serverConfig, contract.NewRegistry(), devAddr, nodeClient, fundedAccounts)
 	return serverConfig, handler
 }
