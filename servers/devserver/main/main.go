@@ -5,42 +5,18 @@ import (
 	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/servers/devserver/devserver"
 	"eth-toy-client/servers/servers"
-	"flag"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
 	"net/http"
-	"time"
 )
 
 func main() {
-	var port string
-	var serverPort string
-	flag.StringVar(&port, "port", "8545", "HTTP RPC port for the dev node")
-	flag.StringVar(&serverPort, "serverPort", "8888", "HTTP RPC port for the supporting server")
-	flag.Parse()
-
-	devNodeConfig := servers.DevNodeConfig{
-		RPCPort: port,
-	}
-	rpcClient, ready, err := servers.ConnectToDevNode(devNodeConfig)
-	if err != nil {
-		log.Fatalf("Error starting dev node: %v", err)
-	}
-
-	select {
-	case <-ready:
-		log.Println("🚦 Node is ready. Proceed.")
-	case <-time.After(5 * time.Second):
-		log.Fatal("🕒 Timeout waiting for dev node to start.")
-	}
-
-	client := ethclient.NewClient(rpcClient)
+	serverConfig, client := servers.EstablishConnectionToDevNode()
 	defer client.Close()
 
 	var accounts []string
-	err = rpcClient.Call(&accounts, "eth_accounts")
+	err := client.Client().Call(&accounts, "eth_accounts")
 	if err != nil || len(accounts) == 0 {
 		log.Fatalf("❌ Failed to get dev account: %v", err)
 	}
@@ -53,18 +29,18 @@ func main() {
 	}
 
 	testAccount := devserver.LoadTestAccounts()
-	fundedAccounts := devserver.FundTestAccounts(devAddr, rpcClient, testAccount)
+	fundedAccounts := devserver.FundTestAccounts(devAddr, client.Client(), testAccount)
 
 	go func() {
-		log.Println("🌐 Supporting HTTP server listening at http://localhost:" + serverPort + "...")
+		log.Println("🌐 Supporting HTTP server listening at http://localhost:" + serverConfig.Port + "...")
 		err := http.ListenAndServe(
-			":"+serverPort,
-			devserver.SetupRoutes(contract.NewRegistry(), devAddr, port, fundedAccounts))
+			":"+serverConfig.Port,
+			devserver.SetupRoutes(contract.NewRegistry(), devAddr, serverConfig.DevNodeConfig.RPCPort, fundedAccounts))
 		if err != nil {
 			log.Fatalf("❌ Failed to start HTTP server: %v", err)
 		}
 	}()
 
-	log.Printf("📡 Dev node ready at http://localhost:%s — Press Ctrl+C to exit", port)
+	log.Printf("📡 Dev node ready at http://localhost:%s — Press Ctrl+C to exit", serverConfig.Port)
 	select {}
 }
