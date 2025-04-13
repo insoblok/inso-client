@@ -35,7 +35,7 @@ func main() {
 		log.Println("🌐 Supporting HTTP server listening at http://localhost:" + serverConfig.Port + "...")
 		err := http.ListenAndServe(
 			":"+serverConfig.Port,
-			devserver.SetupRoutes(contract.NewRegistry(), devAddr, serverConfig.DevNodeConfig.RPCPort, fundedAccounts))
+			devserver.SetupRoutes(contract.NewRegistry(), devAddr, serverConfig.DevNodeConfig, fundedAccounts))
 		if err != nil {
 			log.Fatalf("❌ Failed to start HTTP server: %v", err)
 		}

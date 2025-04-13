@@ -2,6 +2,7 @@ package devserver
 
 import (
 	contract "eth-toy-client/core/contracts"
+	"eth-toy-client/servers/servers"
 	"eth-toy-client/swagger"
 	"github.com/ethereum/go-ethereum/common"
 	"net/http"
@@ -13,16 +14,16 @@ type accountResponse struct {
 	PrivateKey string `json:"privateKey"`
 }
 
-func SetupRoutes(reg *contract.ContractRegistry, devAccount common.Address, rpcPort string, accounts *map[string]*TestAccount) *http.ServeMux {
+func SetupRoutes(reg *contract.ContractRegistry, devAccount common.Address, nodeConfig servers.DevNodeConfig, accounts *map[string]*TestAccount) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/dev-account", handleDevAccounts(devAccount))
 	mux.HandleFunc("/accounts", handleAccounts(accounts))
-	mux.HandleFunc("/info", handleInfo(rpcPort, accounts))
-	mux.HandleFunc("/sign-tx", signTxHandler(rpcPort, accounts))
-	mux.HandleFunc("/send-tx", handleSendTx(rpcPort, accounts))
-	mux.HandleFunc("/api/sign-tx", handleSignTx(rpcPort, accounts))
-	mux.HandleFunc("/api/send-tx", handleSendTxAPI(rpcPort, accounts))
+	mux.HandleFunc("/info", handleInfo(nodeConfig, accounts))
+	mux.HandleFunc("/sign-tx", signTxHandler(nodeConfig, accounts))
+	mux.HandleFunc("/send-tx", handleSendTx(nodeConfig, accounts))
+	mux.HandleFunc("/api/sign-tx", handleSignTx(nodeConfig, accounts))
+	mux.HandleFunc("/api/send-tx", handleSendTxAPI(nodeConfig, accounts))
 	mux.HandleFunc("/api/register-alias", handleRegisterAlias(reg))
 	mux.HandleFunc("/api/contracts", handleGetContracts(reg))
 	mux.HandleFunc("/api/contracts/", handleGetContractByAlias(reg))

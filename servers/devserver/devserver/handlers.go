@@ -11,6 +11,7 @@ import (
 	"eth-toy-client/core/httpapi"
 	"eth-toy-client/core/logutil"
 	toytypes "eth-toy-client/core/types"
+	"eth-toy-client/servers/servers"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -53,15 +54,15 @@ func handleAccounts(accounts *map[string]*TestAccount) func(w http.ResponseWrite
 	}
 }
 
-func handleInfo(rpcPort string, accounts *map[string]*TestAccount) func(w http.ResponseWriter, r *http.Request) {
+func handleInfo(nodeConfig servers.DevNodeConfig, accounts *map[string]*TestAccount) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := struct {
 			RPCURL        string `json:"rpcUrl"`
 			RPCPort       string `json:"rpcPort"`
 			AccountsCount int    `json:"accountsCount"`
 		}{
-			RPCURL:        "http://localhost:" + rpcPort,
-			RPCPort:       rpcPort,
+			RPCURL:        "http://localhost:" + nodeConfig.RPCPort,
+			RPCPort:       nodeConfig.RPCPort,
 			AccountsCount: len(*accounts),
 		}
 
@@ -70,7 +71,7 @@ func handleInfo(rpcPort string, accounts *map[string]*TestAccount) func(w http.R
 	}
 }
 
-func signTxHandler(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
+func signTxHandler(nodeConfig servers.DevNodeConfig, accounts *map[string]*TestAccount) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req toytypes.SignTxRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -96,7 +97,7 @@ func signTxHandler(rpcPort string, accounts *map[string]*TestAccount) http.Handl
 		}
 
 		// 🧠 Connect to RPC to get nonce / chain ID
-		rpcClient, err := rpc.Dial("http://localhost:" + rpcPort)
+		rpcClient, err := rpc.Dial("http://localhost:" + nodeConfig.RPCPort)
 		if err != nil {
 			http.Error(w, "RPC dial failed", http.StatusInternalServerError)
 			return
@@ -158,7 +159,7 @@ func signTxHandler(rpcPort string, accounts *map[string]*TestAccount) http.Handl
 
 }
 
-func handleSendTx(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
+func handleSendTx(nodeConfig servers.DevNodeConfig, accounts *map[string]*TestAccount) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req toytypes.SignTxRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -178,7 +179,7 @@ func handleSendTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 			return
 		}
 
-		client, err := ethclient.Dial("http://localhost:" + rpcPort)
+		client, err := ethclient.Dial("http://localhost:" + nodeConfig.RPCPort)
 		if err != nil {
 			http.Error(w, "Failed to connect to dev node", http.StatusInternalServerError)
 			return
@@ -223,7 +224,7 @@ func handleSendTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 	}
 }
 
-func handleSignTx(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
+func handleSignTx(nodeConfig servers.DevNodeConfig, accounts *map[string]*TestAccount) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			log.Printf("⚠️ Invalid method: %s", r.Method)
@@ -262,7 +263,7 @@ func handleSignTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 			return
 		}
 
-		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, &to.Address, val, rpcPort, nil)
+		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, &to.Address, val, nodeConfig.RPCPort, nil)
 		if err != nil {
 			log.Printf("❌ Signing failed: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())
@@ -280,7 +281,7 @@ func handleSignTx(rpcPort string, accounts *map[string]*TestAccount) http.Handle
 		httpapi.WriteOK[toytypes.SignTxAPIResponse](w, resp)
 	}
 }
-func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.HandlerFunc {
+func handleSendTxAPI(nodeConfig servers.DevNodeConfig, accounts *map[string]*TestAccount) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			log.Printf("⚠️ Invalid method: %s", r.Method)
@@ -365,14 +366,14 @@ func handleSendTxAPI(rpcPort string, accounts *map[string]*TestAccount) http.Han
 			log.Printf("📨 /send-tx: from=%s → to=%s | value=%s", req.From, req.To, req.Value)
 		}
 
-		_, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, toAddr, val, rpcPort, data)
+		_, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, toAddr, val, nodeConfig.RPCPort, data)
 		if err != nil {
 			log.Printf("❌ Signing failed: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())
 			return
 		}
 
-		client, err := ethclient.Dial("http://localhost:" + rpcPort)
+		client, err := ethclient.Dial("http://localhost:" + nodeConfig.RPCPort)
 		if err != nil {
 			log.Printf("❌ Failed to connect to dev node: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "ConnectionFailed", "Could not connect to dev node")
