@@ -4,7 +4,6 @@ import "sync"
 
 type LogEvent struct {
 	Contract  string                 // Optional: contract name or address
-	Event     string                 // Event name (e.g. "Transfer")
 	TxHash    string                 // Transaction hash
 	Block     uint64                 // Block number
 	Timestamp int64                  // Optional: unix time

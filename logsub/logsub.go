@@ -41,9 +41,7 @@ func (l *LogListener) Listen(ctx context.Context) {
 	log.Printf("✅ LogListener started. Listening for logs...")
 
 	// Example log filter: change as needed
-	filter := ethereum.FilterQuery{
-		Addresses: []common.Address{}, // Empty list means all contracts
-	}
+	filter := ethereum.FilterQuery{}
 
 	logs := make(chan types.Log)
 
@@ -102,7 +100,7 @@ func (l *LogListener) Listen2(ctx context.Context) {
 			// Convert the Ethereum log into a LogEvent
 			event := logbus.LogEvent{
 				Contract:  logEvent.Address.Hex(),
-				Event:     "UnknownEventForNow", // For now, assume generic event
+				LogType:   logbus.UnknownEventLog,
 				TxHash:    logEvent.TxHash.Hex(),
 				Block:     logEvent.BlockNumber,
 				Timestamp: time.Now().Unix(),
@@ -128,8 +126,8 @@ func (l *LogListener) StartSimulateListening() {
 	log.Println("✅LogListener started. Listening for logs...")
 
 	event := logbus.LogEvent{
-		Event:  "TestEvent",
-		TxHash: "0x123",
+		LogType: logbus.UnknownEventLog,
+		TxHash:  "0x123",
 	}
 
 	l.Broadcaster.Publish(event)
@@ -143,7 +141,7 @@ type PrintToConsole struct {
 
 func (p *PrintToConsole) Consume() {
 	for event := range p.Events {
-		log.Printf("🚀 %s received event: %s with TxHash: %s", p.Name, event.Event, event.TxHash)
+		log.Printf("🚀 %s received event: %v with TxHash: %s", p.Name, event.LogType, event.TxHash)
 	}
 }
 
@@ -168,19 +166,13 @@ func (d *DefaultDecoder) DecodeLog(log types.Log) (logbus.LogEvent, error) {
 
 func (d *DefaultDecoder) decodeGenericLog(log types.Log) (logbus.LogEvent, error) {
 	return logbus.LogEvent{
+		LogType:   logbus.UnknownEventLog,
 		Contract:  log.Address.Hex(),
-		Event:     "UnknownEvent",
 		TxHash:    log.TxHash.Hex(),
 		Block:     log.BlockNumber,
 		Timestamp: time.Now().Unix(),
 		Args:      make(map[string]interface{}),
 	}, nil
-}
-
-func NewDefaultDecoder(decoderFn func(logType logbus.LogType) (Decoder, error)) *DefaultDecoder {
-	return &DefaultDecoder{
-		DecoderFn: decoderFn,
-	}
 }
 
 type DecoderRegistry struct {
@@ -227,7 +219,6 @@ func (t *TransactionLogDecoder) DecodeLog(log types.Log) (logbus.LogEvent, error
 	return logbus.LogEvent{
 		LogType:   logbus.TransactionLog,
 		Contract:  log.Address.Hex(),
-		Event:     "TransactionLog",
 		TxHash:    log.TxHash.Hex(),
 		Block:     log.BlockNumber,
 		Timestamp: time.Now().Unix(),
@@ -239,7 +230,6 @@ func (t *UnknownEventLogDecoder) DecodeLog(log types.Log) (logbus.LogEvent, erro
 	return logbus.LogEvent{
 		LogType:   logbus.UnknownEventLog,
 		Contract:  log.Address.Hex(),
-		Event:     "UnknownEventLog",
 		TxHash:    log.TxHash.Hex(),
 		Block:     log.BlockNumber,
 		Timestamp: time.Now().Unix(),
