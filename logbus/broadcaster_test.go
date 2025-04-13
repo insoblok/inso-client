@@ -24,9 +24,9 @@ func startConsumer(name string, delay time.Duration, capacity int, done chan str
 		for {
 			select {
 			case event := <-ch:
-				log.Printf("✅ %s: Picked up event %s with TxHash: %s", name, event.Event, event.TxHash)
+				log.Printf("✅ %s: Picked up event %v with TxHash: %s", name, event.LogType, event.TxHash)
 				time.Sleep(delay) // simulate work (processing delay)
-				log.Printf("🧈 %s: Consumed event %s with TxHash: %s", name, event.Event, event.TxHash)
+				log.Printf("🧈 %s: Consumed event %v with TxHash: %s", name, event.LogType, event.TxHash)
 			case <-done: // Close the goroutine once done channel is closed
 				log.Printf("%s: Exiting", name)
 				return
@@ -46,8 +46,8 @@ func PublishEventsInLoop(b LogBroadcaster, n int, waitTime time.Duration) {
 	for i := 0; i < n; i++ {
 		// Create an event with an incremented event number
 		event := LogEvent{
-			Event:  "Event",
-			TxHash: fmt.Sprintf("0x%x", i), // Unique txHash as a hex string
+			LogType: UnknownEventLog,
+			TxHash:  fmt.Sprintf("0x%x", i), // Unique txHash as a hex string
 		}
 
 		// Log the publishing of the event
@@ -76,8 +76,8 @@ func TestSubscribeAndPublish(t *testing.T) {
 	b.Subscribe(ch)
 
 	event := LogEvent{
-		Event:  "TestEvent",
-		TxHash: "0x123",
+		LogType: UnknownEventLog,
+		TxHash:  "0x123",
 	}
 
 	b.Publish(event)
@@ -105,8 +105,8 @@ func TestMultipleSubscribers(t *testing.T) {
 	b.Subscribe(ch2)
 
 	event := LogEvent{
-		Event:  "TestEventMulti",
-		TxHash: "0xabc",
+		LogType: UnknownEventLog,
+		TxHash:  "0xabc",
 	}
 
 	b.Publish(event)
@@ -129,14 +129,14 @@ func TestSlowSubscriberDoesNotBlockOthers(t *testing.T) {
 	b.Subscribe(chFast.Channel)
 
 	log.Printf("🎤 Publishing E1")
-	event1 := LogEvent{Event: "E1", TxHash: "0x1"}
+	event1 := LogEvent{LogType: UnknownEventLog, TxHash: "0x1"}
 	b.Publish(event1) // Goes to both chSlow and chFast
 	log.Printf("🐳 Published E1")
 	// Allow some time for consumers to process the event
 	time.Sleep(2 * time.Second)
 
 	log.Printf("🎤 Publishing E2")
-	event2 := LogEvent{Event: "E2", TxHash: "0x2"}
+	event2 := LogEvent{LogType: UnknownEventLog, TxHash: "0x2"}
 	b.Publish(event2)
 	log.Printf("🐳Published E2")
 
