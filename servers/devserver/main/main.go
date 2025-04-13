@@ -12,24 +12,24 @@ import (
 )
 
 func main() {
-	serverConfig, client := servers.EstablishConnectionToDevNode()
-	defer client.Close()
+	serverConfig, nodeClient := servers.EstablishConnectionToDevNode()
+	defer nodeClient.Close()
 
 	var accounts []string
-	err := client.Client().Call(&accounts, "eth_accounts")
+	err := nodeClient.Client().Call(&accounts, "eth_accounts")
 	if err != nil || len(accounts) == 0 {
 		log.Fatalf("❌ Failed to get dev account: %v", err)
 	}
 	devAddr := common.HexToAddress(accounts[0])
 	fmt.Printf("✅ Dev account: %s\n", devAddr.Hex())
 
-	bal, err := client.BalanceAt(context.Background(), devAddr, nil)
+	bal, err := nodeClient.BalanceAt(context.Background(), devAddr, nil)
 	if err == nil {
 		fmt.Printf("💰 Balance: %s wei\n", bal.String())
 	}
 
 	testAccount := devserver.LoadTestAccounts()
-	fundedAccounts := devserver.FundTestAccounts(devAddr, client.Client(), testAccount)
+	fundedAccounts := devserver.FundTestAccounts(devAddr, nodeClient.Client(), testAccount)
 
 	go func() {
 		log.Println("🌐 Supporting HTTP server listening at http://localhost:" + serverConfig.Port + "...")
