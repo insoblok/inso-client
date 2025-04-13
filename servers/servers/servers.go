@@ -66,9 +66,15 @@ func ConnectToDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error
 	return client, ready, nil
 }
 
-func EstablishConnectionToDevNode() (ServerConfig, *ethclient.Client) {
+type NodeClient struct {
+	Config    DevNodeConfig
+	Client    *ethclient.Client
+	RPCClient *rpc.Client
+}
+
+func EstablishConnectionToDevNode() (ServerConfig, *NodeClient) {
 	serverConfig := GetServerConfig("DevServer")
-	log.Printf("starting Server: %+v", serverConfig)
+	log.Printf("📡 starting Server: %+v", serverConfig)
 	rpcClient, readyChannel, err := ConnectToDevNode(serverConfig.DevNodeConfig)
 	if err != nil {
 		log.Fatalf("Error starting dev node: %v", err)
@@ -82,5 +88,10 @@ func EstablishConnectionToDevNode() (ServerConfig, *ethclient.Client) {
 	}
 
 	client := ethclient.NewClient(rpcClient)
-	return serverConfig, client
+	return serverConfig,
+		&NodeClient{
+			Config:    serverConfig.DevNodeConfig,
+			Client:    client,
+			RPCClient: rpcClient,
+		}
 }
