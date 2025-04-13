@@ -59,8 +59,8 @@ func handleInfo(nodeClient *servers.NodeClient, accounts *map[string]*TestAccoun
 			RPCPort       string `json:"rpcPort"`
 			AccountsCount int    `json:"accountsCount"`
 		}{
-			RPCURL:        "http://localhost:" + nodeClient.Config.RPCPort,
-			RPCPort:       nodeClient.Config.RPCPort,
+			RPCURL:        "http://localhost:" + nodeClient.Config.Port,
+			RPCPort:       nodeClient.Config.Port,
 			AccountsCount: len(*accounts),
 		}
 
@@ -246,7 +246,7 @@ func handleSignTx(nodeClient *servers.NodeClient, accounts *map[string]*TestAcco
 			return
 		}
 
-		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, &to.Address, val, nodeClient.Config.RPCPort, nil)
+		tx, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, &to.Address, val, nodeClient.Config.Port, nil)
 		if err != nil {
 			log.Printf("❌ Signing failed: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())
@@ -349,7 +349,7 @@ func handleSendTxAPI(nodeClient *servers.NodeClient, accounts *map[string]*TestA
 			log.Printf("📨 /send-tx: from=%s → to=%s | value=%s", req.From, req.To, req.Value)
 		}
 
-		_, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, toAddr, val, nodeClient.Config.RPCPort, data)
+		_, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, toAddr, val, nodeClient.Config.Port, data)
 		if err != nil {
 			log.Printf("❌ Signing failed: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())

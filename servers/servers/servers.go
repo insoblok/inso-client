@@ -19,7 +19,7 @@ func PingDevNode(rpcClient *rpc.Client) bool {
 }
 
 type DevNodeConfig struct {
-	RPCPort string
+	Port string
 }
 
 type ServerConfig struct {
@@ -39,13 +39,13 @@ func GetServerConfig(name string) ServerConfig {
 		Name: name,
 		Port: serverPort,
 		DevNodeConfig: DevNodeConfig{
-			RPCPort: port,
+			Port: port,
 		},
 	}
 }
 
 func ConnectToDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
-	client, err := rpc.Dial("http://localhost:" + config.RPCPort)
+	client, err := rpc.Dial("http://localhost:" + config.Port)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -54,7 +54,7 @@ func ConnectToDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error
 	go func() {
 		for {
 			if PingDevNode(client) {
-				log.Printf("✅ Geth dev node is ready on port %s", config.RPCPort)
+				log.Printf("✅ Geth dev node is ready on port %s", config.Port)
 				close(ready)
 				return
 			}
