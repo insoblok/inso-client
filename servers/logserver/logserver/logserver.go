@@ -1,11 +1,14 @@
 package logserver
 
-import "net/http"
+import (
+	"eth-toy-client/config"
+	"net/http"
+)
 import "eth-toy-client/servers/servers"
 
-func SetupRoutes() *http.ServeMux {
+func SetupRoutes(config config.ServerConfig) *http.ServeMux {
 	mux := http.NewServeMux()
-	servers.SetupPingRoute(mux)
+	servers.SetupPingRoute(config.Name, mux)
 	mux.HandleFunc("/register-contract", registerContract())
 	return mux
 }

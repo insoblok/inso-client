@@ -1,7 +1,7 @@
 package servers
 
 import (
-	"flag"
+	"eth-toy-client/config"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"log"
@@ -19,33 +19,7 @@ func PingDevNode(rpcClient *rpc.Client) bool {
 	return err == nil
 }
 
-type DevNodeConfig struct {
-	Port string
-}
-
-type ServerConfig struct {
-	Name          string
-	Port          string
-	DevNodeConfig DevNodeConfig
-}
-
-func GetServerConfig(name string) ServerConfig {
-	var port string
-	var serverPort string
-	flag.StringVar(&port, "port", "8545", "HTTP RPC port for the dev node")
-	flag.StringVar(&serverPort, "serverPort", "8888", "HTTP RPC port for the supporting server")
-	flag.Parse()
-
-	return ServerConfig{
-		Name: name,
-		Port: serverPort,
-		DevNodeConfig: DevNodeConfig{
-			Port: port,
-		},
-	}
-}
-
-func ConnectToDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
+func ConnectToDevNode(config config.DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
 	client, err := rpc.Dial("http://localhost:" + config.Port)
 	if err != nil {
 		return nil, nil, err
@@ -68,13 +42,13 @@ func ConnectToDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error
 }
 
 type NodeClient struct {
-	Config    DevNodeConfig
+	Config    config.DevNodeConfig
 	Client    *ethclient.Client
 	RPCClient *rpc.Client
 }
 
-func EstablishConnectionToDevNode(name string) (ServerConfig, *NodeClient) {
-	serverConfig := GetServerConfig(name)
+func EstablishConnectionToDevNode(name string) (config.ServerConfig, *NodeClient) {
+	serverConfig := config.GetServerConfig(name)
 	log.Printf("📡 starting Server: %+v", serverConfig)
 	rpcClient, readyChannel, err := ConnectToDevNode(serverConfig.DevNodeConfig)
 	if err != nil {
@@ -99,7 +73,7 @@ func EstablishConnectionToDevNode(name string) (ServerConfig, *NodeClient) {
 
 type MicroService interface {
 	Name() string
-	InitService(nodeClient *NodeClient, serverConfig ServerConfig) (ServerConfig, http.Handler)
+	InitService(nodeClient *NodeClient, serverConfig config.ServerConfig) (config.ServerConfig, http.Handler)
 }
 
 func StartMicroService(microService MicroService) {
@@ -108,7 +82,7 @@ func StartMicroService(microService MicroService) {
 	defer nodeClient.RPCClient.Close()
 	_, handler := microService.InitService(nodeClient, serverConfig)
 	go func() {
-		log.Println("🌐 " + serverConfig.Name + "listening at http://localhost:" + serverConfig.Port + "...")
+		log.Println("🌐 " + serverConfig.Name + "You can ping http://localhost:" + serverConfig.Port + "/ping ...")
 		err := http.ListenAndServe(":"+serverConfig.Port, handler)
 		if err != nil {
 			log.Fatalf("❌ Failed to start HTTP server: %v", err)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"eth-toy-client/config"
 	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/servers/devserver/devserver"
 	"eth-toy-client/servers/servers"
@@ -23,7 +24,7 @@ func (devServer *DevServer) Name() string {
 	return "DevServer"
 }
 
-func (devServer *DevServer) InitService(nodeClient *servers.NodeClient, serverConfig servers.ServerConfig) (servers.ServerConfig, http.Handler) {
+func (devServer *DevServer) InitService(nodeClient *servers.NodeClient, serverConfig config.ServerConfig) (config.ServerConfig, http.Handler) {
 	var accounts []string
 	err := nodeClient.RPCClient.Call(&accounts, "eth_accounts")
 	if err != nil || len(accounts) == 0 {

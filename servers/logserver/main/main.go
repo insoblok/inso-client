@@ -1,6 +1,7 @@
 package main
 
 import (
+	"eth-toy-client/config"
 	"eth-toy-client/servers/logserver/logserver"
 	"eth-toy-client/servers/servers"
 	"net/http"
@@ -18,7 +19,7 @@ func (logServer *LogServer) Name() string {
 	return "LogServer"
 }
 
-func (logServer *LogServer) InitService(nodeClient *servers.NodeClient, serverConfig servers.ServerConfig) (servers.ServerConfig, http.Handler) {
-	handlers := logserver.SetupRoutes()
+func (logServer *LogServer) InitService(nodeClient *servers.NodeClient, serverConfig config.ServerConfig) (config.ServerConfig, http.Handler) {
+	handlers := logserver.SetupRoutes(serverConfig)
 	return serverConfig, handlers
 }
