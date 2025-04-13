@@ -32,12 +32,18 @@ func TestContractAliasNotFound(t *testing.T) {
 	contractFooURL := serverConfig.GetServerUrl("contract/foo")
 	res, err := http.Get(contractFooURL)
 	require.NoError(t, err, "❌ contract/foo failed")
-	//body, err := io.ReadAll(res.Body)
-	//str := string(body)
-	//logutil.Infof("body: %s", str)
 
 	_, apiError, err := httpapi.ParseAPIResponse[contract.DeployedContractMetaJSON](res)
 	require.NoError(t, err, "❌ failed to parse response")
 	require.NotNil(t, apiError, "❌ expected non-nil apiError")
 	logutil.Infof("apiError: %v", apiError)
+}
+
+func TestServerConnectionRefused(t *testing.T) {
+	serverConfig := config.GetServerConfig(ServerName)
+	pingURL := serverConfig.GetServerUrl("ping")
+	_, err := http.Get(pingURL)
+	t.Log(err)
+	require.NotNil(t, err, "❌ expected non-nil error when sever is not running "+pingURL)
+	require.Contains(t, err.Error(), "connection refused", "❌ expected connection refused error")
 }
