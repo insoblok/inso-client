@@ -1,20 +1,67 @@
 package logserver
 
 import (
+	"encoding/json"
 	"eth-toy-client/config"
+	contract "eth-toy-client/core/contracts"
+	"eth-toy-client/core/httpapi"
+	"eth-toy-client/core/logutil"
+	toytypes "eth-toy-client/core/types"
 	"net/http"
+	"time"
 )
 import "eth-toy-client/servers/servers"
 
-func SetupRoutes(config config.ServerConfig) *http.ServeMux {
+func SetupRoutes(config config.ServerConfig, contractRegistry *contract.ContractRegistry) *http.ServeMux {
 	mux := http.NewServeMux()
 	servers.SetupPingRoute(config.Name, mux)
-	mux.HandleFunc("/register-contract", registerContract())
+	mux.HandleFunc("/register-contract", registerContract(contractRegistry))
+	//mux.HandleFunc("/contract", getContract(contractRegistry))
+
+	mux.Handle("/contract/", http.StripPrefix("/contract", getContract(contractRegistry)))
 	return mux
 }
 
-func registerContract() http.HandlerFunc {
+func getContract(registry *contract.ContractRegistry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		alias := r.URL.Path[len("/"):]
+		if alias == "" {
+			httpapi.WriteError(w, 400, "❌ MissingAlias", "Alias must be specified in the path")
+			return
+		}
+		reg, err := registry.Get(alias)
+		if !err {
+			httpapi.WriteError(w, 404, "❌ AliasNotFound", "Failed to get alias "+alias)
+			return
+		}
+		httpapi.WriteOK(w, &reg)
+	}
+}
 
+func registerContract(reg *contract.ContractRegistry) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var meta contract.DeployedContractMetaJSON
+		if err := json.NewDecoder(r.Body).Decode(&meta); err != nil {
+			httpapi.WriteError(w, 400, "❌ InvalidRequest", "Could not parse JSON")
+			return
+		}
+		if meta.Alias == "" || meta.Address == "" || meta.TxHash == "" {
+			httpapi.WriteError(w, 400, "❌ MissingFields", "Alias, address, and txHash are required")
+			return
+		}
+		if meta.Timestamp == 0 {
+			meta.Timestamp = time.Now().Unix()
+		}
+
+		logutil.Infof("📦 Registering alias: %s → %s", meta.Alias, meta.Address)
+		if err := reg.Add(meta); err != nil {
+			httpapi.WriteError(w, 400, "DuplicateAlias", err.Error())
+			return
+		}
+
+		httpapi.WriteOK(w, &toytypes.AliasRegisterResponse{
+			Status: "ok",
+			Alias:  meta.Alias,
+		})
 	}
 }

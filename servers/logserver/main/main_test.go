@@ -2,6 +2,9 @@ package main
 
 import (
 	"eth-toy-client/config"
+	contract "eth-toy-client/core/contracts"
+	"eth-toy-client/core/httpapi"
+	"eth-toy-client/core/logutil"
 	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
@@ -22,4 +25,19 @@ func TestPing(t *testing.T) {
 	defer res.Body.Close()
 
 	require.Equal(t, string(body), ServerName+" says pong")
+}
+
+func TestContractAliasNotFound(t *testing.T) {
+	serverConfig := config.GetServerConfig(ServerName)
+	contractFooURL := serverConfig.GetServerUrl("contract/foo")
+	res, err := http.Get(contractFooURL)
+	require.NoError(t, err, "❌ contract/foo failed")
+	//body, err := io.ReadAll(res.Body)
+	//str := string(body)
+	//logutil.Infof("body: %s", str)
+
+	_, apiError, err := httpapi.ParseAPIResponse[contract.DeployedContractMetaJSON](res)
+	require.NoError(t, err, "❌ failed to parse response")
+	require.NotNil(t, apiError, "❌ expected non-nil apiError")
+	logutil.Infof("apiError: %v", apiError)
 }
