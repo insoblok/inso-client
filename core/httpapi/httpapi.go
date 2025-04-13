@@ -73,3 +73,13 @@ func PostWithAPIResponse[T any](url string, payload any) (*T, *APIError, error) 
 
 	return ParseAPIResponse[T](resp)
 }
+
+func PostWithAPIResponseNoPayload[T any](url string) (*T, *APIError, error) {
+	resp, err := http.Post(url, "application/json", bytes.NewReader([]byte{}))
+	if err != nil {
+		return nil, nil, fmt.Errorf("HTTP POST failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	return ParseAPIResponse[T](resp)
+}

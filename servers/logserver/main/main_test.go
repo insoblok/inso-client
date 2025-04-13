@@ -5,6 +5,8 @@ import (
 	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/core/httpapi"
 	"eth-toy-client/core/logutil"
+	toytypes "eth-toy-client/core/types"
+	"eth-toy-client/kit/mockusdc"
 	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
@@ -58,4 +60,32 @@ func TestServeInvalidUrl(t *testing.T) {
 	resBody, err := io.ReadAll(resp.Body)
 	require.NoError(t, err, "❌ expected to read response body")
 	require.Equal(t, string(resBody), "404 page not found")
+}
+
+func TestRegisterContractAddress(t *testing.T) {
+	serverConfig := config.GetServerConfig(ServerName)
+	registerURL := serverConfig.GetServerUrl("register-contract")
+	payload := contract.DeployedContractMetaJSON{
+		Alias:     "CounterV2",
+		Address:   "0x1234567890123456789012345678901234567890",
+		TxHash:    "0x1234567890123456789012345678901234567890",
+		ABI:       mockusdc.MockusdcMetaData.ABI,
+		Bytecode:  mockusdc.MockusdcMetaData.ABI,
+		Timestamp: 1234567890,
+		Owner:     "0x1234567890123456789012345678901234567890",
+		Overwrite: true,
+	}
+
+	res, apiError, err := httpapi.PostWithAPIResponse[toytypes.AliasRegisterResponse](registerURL, payload)
+	require.NoError(t, err, "❌ register contract failed")
+	require.Nil(t, apiError, "❌ API Error expected to be nil")
+	require.Equal(t, "ok", res.Status, "❌ register contract failed")
+	require.Equal(t, "CounterV2", res.Alias, "❌ register contract failed")
+
+	contractURL := serverConfig.GetServerUrl("contract/" + payload.Alias)
+	res2, apiError, err := httpapi.PostWithAPIResponseNoPayload[contract.DeployedContractMetaJSON](contractURL)
+	require.NoError(t, err, "❌ failed to get contract, expected nil error")
+	require.Nil(t, apiError, "❌ failed to get contract, expected nil apiError")
+	require.Equal(t, &payload, res2, "❌ payload mismatch")
+
 }
