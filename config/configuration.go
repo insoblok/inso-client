@@ -46,3 +46,7 @@ func GetServerConfig(name string) ServerConfig {
 
 	return registry[name]
 }
+
+func (config ServerConfig) GetServerUrl(pathSegment string) string {
+	return "http://localhost:" + config.Port + "/" + pathSegment
+}
