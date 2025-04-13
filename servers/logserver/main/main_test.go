@@ -47,3 +47,14 @@ func TestServerConnectionRefused(t *testing.T) {
 	require.NotNil(t, err, "❌ expected non-nil error when sever is not running "+pingURL)
 	require.Contains(t, err.Error(), "connection refused", "❌ expected connection refused error")
 }
+
+func TestServeInvalidUrl(t *testing.T) {
+	serverConfig := config.GetServerConfig(ServerName)
+	invalidURL := serverConfig.GetServerUrl("invalid")
+	resp, err := http.Get(invalidURL)
+	require.NoError(t, err, "❌ invalid url failed")
+	require.Equal(t, 404, resp.StatusCode, "❌ expected not found")
+	resBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err, "❌ expected to read response body")
+	require.Equal(t, string(resBody), "404 page not found")
+}
