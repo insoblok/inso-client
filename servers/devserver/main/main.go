@@ -12,10 +12,14 @@ import (
 )
 
 func main() {
-	serverConfig, nodeClient := servers.EstablishConnectionToDevNode()
-	defer nodeClient.Client.Close()
-	defer nodeClient.RPCClient.Close()
+	devServer := &DevServer{}
+	servers.StartMicroService(devServer)
+	select {}
+}
 
+type DevServer struct{}
+
+func (s *DevServer) InitService(nodeClient *servers.NodeClient, serverConfig servers.ServerConfig) (servers.ServerConfig, http.Handler) {
 	var accounts []string
 	err := nodeClient.RPCClient.Call(&accounts, "eth_accounts")
 	if err != nil || len(accounts) == 0 {
@@ -27,20 +31,12 @@ func main() {
 	bal, err := nodeClient.Client.BalanceAt(context.Background(), devAddr, nil)
 	if err == nil {
 		fmt.Printf("💰 Balance: %s wei\n", bal.String())
+	} else {
+		log.Fatalf("❌ Failed to obtain balance for devAddr: %v", err)
 	}
 
 	testAccount := devserver.LoadTestAccounts()
 	fundedAccounts := devserver.FundTestAccounts(devAddr, nodeClient.RPCClient, testAccount)
-
-	go func() {
-		log.Println("🌐 " + serverConfig.Name + "listening at http://localhost:" + serverConfig.Port + "...")
-		err := http.ListenAndServe(
-			":"+serverConfig.Port,
-			devserver.SetupRoutes(contract.NewRegistry(), devAddr, nodeClient, fundedAccounts))
-		if err != nil {
-			log.Fatalf("❌ Failed to start HTTP server: %v", err)
-		}
-	}()
-
-	select {}
+	handler := devserver.SetupRoutes(contract.NewRegistry(), devAddr, nodeClient, fundedAccounts)
+	return serverConfig, handler
 }

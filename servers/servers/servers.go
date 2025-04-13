@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"log"
 	"math/big"
+	"net/http"
 	"time"
 )
 
@@ -94,4 +95,22 @@ func EstablishConnectionToDevNode() (ServerConfig, *NodeClient) {
 			Client:    client,
 			RPCClient: rpcClient,
 		}
+}
+
+type MicroService interface {
+	InitService(nodeClient *NodeClient, serverConfig ServerConfig) (ServerConfig, http.Handler)
+}
+
+func StartMicroService(microService MicroService) {
+	serverConfig, nodeClient := EstablishConnectionToDevNode()
+	defer nodeClient.Client.Close()
+	defer nodeClient.RPCClient.Close()
+	_, handler := microService.InitService(nodeClient, serverConfig)
+	go func() {
+		log.Println("🌐 " + serverConfig.Name + "listening at http://localhost:" + serverConfig.Port + "...")
+		err := http.ListenAndServe(":"+serverConfig.Port, handler)
+		if err != nil {
+			log.Fatalf("❌ Failed to start HTTP server: %v", err)
+		}
+	}()
 }

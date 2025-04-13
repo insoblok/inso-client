@@ -14,7 +14,11 @@ type accountResponse struct {
 	PrivateKey string `json:"privateKey"`
 }
 
-func SetupRoutes(reg *contract.ContractRegistry, devAccount common.Address, nodeClient *servers.NodeClient, accounts *map[string]*TestAccount) *http.ServeMux {
+func SetupRoutes(
+	reg *contract.ContractRegistry,
+	devAccount common.Address,
+	nodeClient *servers.NodeClient,
+	accounts *map[string]*TestAccount) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/dev-account", handleDevAccounts(devAccount))
