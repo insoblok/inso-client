@@ -4,6 +4,7 @@ import (
 	"context"
 	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/servers/devserver/devserver"
+	"eth-toy-client/servers/servers"
 	"flag"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,10 +21,10 @@ func main() {
 	flag.StringVar(&serverPort, "serverPort", "8888", "HTTP RPC port for the supporting server")
 	flag.Parse()
 
-	devNodeConfig := devserver.DevNodeConfig{
+	devNodeConfig := servers.DevNodeConfig{
 		RPCPort: port,
 	}
-	rpcClient, ready, err := devserver.ConnectToDevNode(devNodeConfig)
+	rpcClient, ready, err := servers.ConnectToDevNode(devNodeConfig)
 	if err != nil {
 		log.Fatalf("Error starting dev node: %v", err)
 	}

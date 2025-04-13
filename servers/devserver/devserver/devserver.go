@@ -5,7 +5,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"eth-toy-client/servers/servers"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -14,13 +16,7 @@ import (
 	"log"
 	"math/big"
 	"strings"
-	"time"
-
-	"github.com/ethereum/go-ethereum/common"
 )
-
-type ChainId *big.Int
-type Nonce *big.Int
 
 type TestAccount struct {
 	Address common.Address
@@ -86,38 +82,6 @@ func FundTestAccounts(
 	return testAccounts
 }
 
-func PingDevNode(rpcClient *rpc.Client) bool {
-	var result string
-	err := rpcClient.Call(&result, "web3_clientVersion")
-	return err == nil
-}
-
-type DevNodeConfig struct {
-	RPCPort string
-}
-
-func ConnectToDevNode(config DevNodeConfig) (*rpc.Client, <-chan struct{}, error) {
-	client, err := rpc.Dial("http://localhost:" + config.RPCPort)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ready := make(chan struct{})
-	go func() {
-		for {
-			if PingDevNode(client) {
-				log.Printf("✅ Geth dev node is ready on port %s", config.RPCPort)
-				close(ready)
-				return
-			}
-			log.Println("⏳ Waiting for Geth to be ready...")
-			time.Sleep(1 * time.Second)
-		}
-	}()
-
-	return client, ready, nil
-}
-
 type SignTxResponse struct {
 	Tx string `json:"tx"` // signed RLP hex
 }
@@ -171,7 +135,7 @@ func BuildAndSignTx(
 	return tx, signedTx, nil
 }
 
-func SignTx(chainID ChainId, rawTx *types.Transaction, key *ecdsa.PrivateKey) (*types.Transaction, error) {
+func SignTx(chainID servers.ChainId, rawTx *types.Transaction, key *ecdsa.PrivateKey) (*types.Transaction, error) {
 	singer := types.NewPragueSigner(chainID)
 	digest := singer.Hash(rawTx).Bytes()
 	fmt.Printf("🦄 digestLength: %x\n", len(digest))
