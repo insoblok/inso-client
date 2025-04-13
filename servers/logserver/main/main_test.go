@@ -40,6 +40,7 @@ func TestContractAliasNotFound(t *testing.T) {
 }
 
 func TestServerConnectionRefused(t *testing.T) {
+	//Need to make sure the server is not running
 	serverConfig := config.GetServerConfig(ServerName)
 	pingURL := serverConfig.GetServerUrl("ping")
 	_, err := http.Get(pingURL)
