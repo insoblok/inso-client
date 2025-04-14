@@ -16,7 +16,7 @@ func main() {
 
 type LogServer struct{}
 
-func (logServer *LogServer) Name() string {
+func (logServer *LogServer) Name() config.ServerName {
 	return "LogServer"
 }
 

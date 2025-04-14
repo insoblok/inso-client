@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-var ServerName = "LogServer"
+var ServerName = config.ServerName("LogServer")
 
 func TestPing(t *testing.T) {
 	serverConfig := config.GetServerConfig(ServerName)
@@ -27,7 +27,7 @@ func TestPing(t *testing.T) {
 	require.NoError(t, err, "❌ failed to read response body")
 	defer res.Body.Close()
 
-	require.Equal(t, string(body), ServerName+" says pong")
+	require.Equal(t, string(ServerName)+" says pong", string(body))
 }
 
 func TestServerConnectionRefused(t *testing.T) {

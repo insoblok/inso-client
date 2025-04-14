@@ -20,7 +20,7 @@ func main() {
 
 type DevServer struct{}
 
-func (devServer *DevServer) Name() string {
+func (devServer *DevServer) Name() config.ServerName {
 	return "DevServer"
 }
 

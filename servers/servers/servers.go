@@ -47,7 +47,7 @@ type NodeClient struct {
 	RPCClient *rpc.Client
 }
 
-func EstablishConnectionToDevNode(name string) (config.ServerConfig, *NodeClient) {
+func EstablishConnectionToDevNode(name config.ServerName) (config.ServerConfig, *NodeClient) {
 	serverConfig := config.GetServerConfig(name)
 	log.Printf("📡 starting Server: %+v", serverConfig)
 	rpcClient, readyChannel, err := ConnectToDevNode(serverConfig.DevNodeConfig)
@@ -72,7 +72,7 @@ func EstablishConnectionToDevNode(name string) (config.ServerConfig, *NodeClient
 }
 
 type MicroService interface {
-	Name() string
+	Name() config.ServerName
 	InitService(nodeClient *NodeClient, serverConfig config.ServerConfig) (config.ServerConfig, http.Handler)
 }
 
@@ -82,7 +82,7 @@ func StartMicroService(microService MicroService) {
 	defer nodeClient.RPCClient.Close()
 	_, handler := microService.InitService(nodeClient, serverConfig)
 	go func() {
-		log.Println("🌐 " + serverConfig.Name + "You can ping http://localhost:" + serverConfig.Port + "/ping ...")
+		log.Println("🌐 " + string(serverConfig.Name) + "You can ping http://localhost:" + serverConfig.Port + "/ping ...")
 		err := http.ListenAndServe(":"+serverConfig.Port, handler)
 		if err != nil {
 			log.Fatalf("❌ Failed to start HTTP server: %v", err)

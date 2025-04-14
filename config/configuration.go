@@ -1,18 +1,22 @@
 package config
 
-import "flag"
+import (
+	"flag"
+)
+
+type ServerName string
 
 type DevNodeConfig struct {
 	Port string
 }
 
 type ServerConfig struct {
-	Name          string
+	Name          ServerName
 	Port          string
 	DevNodeConfig DevNodeConfig
 }
 
-func GetServerConfigFromFlag(name string) ServerConfig {
+func GetServerConfigFromFlag(name ServerName) ServerConfig {
 	var port string
 	var serverPort string
 	flag.StringVar(&port, "port", "8545", "HTTP RPC port for the dev node")
@@ -28,11 +32,11 @@ func GetServerConfigFromFlag(name string) ServerConfig {
 	}
 }
 
-func GetServerConfig(name string) ServerConfig {
+func GetServerConfig(name ServerName) ServerConfig {
 	devNodeConfig := DevNodeConfig{
 		Port: "8565",
 	}
-	registry := make(map[string]ServerConfig)
+	registry := make(map[ServerName]ServerConfig)
 	registry["DevServer"] = ServerConfig{
 		Name:          "DevServer",
 		Port:          "8575",
