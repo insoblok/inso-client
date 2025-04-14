@@ -70,7 +70,7 @@ func TestRegisterContractAddress(t *testing.T) {
 		Address:   "0x1234567890123456789012345678901234567890",
 		TxHash:    "0x1234567890123456789012345678901234567890",
 		ABI:       mockusdc.MockusdcMetaData.ABI,
-		Bytecode:  mockusdc.MockusdcMetaData.ABI,
+		Bytecode:  mockusdc.MockusdcMetaData.Bin,
 		Timestamp: 1234567890,
 		Owner:     "0x1234567890123456789012345678901234567890",
 		Overwrite: true,
