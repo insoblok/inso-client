@@ -36,13 +36,14 @@ func (serverName ServerName) GetServerConfig() ServerConfig {
 		Port: "8565",
 	}
 	registry := make(map[ServerName]ServerConfig)
-	registry["DevServer"] = ServerConfig{
-		Name:          "DevServer",
+	registry[Servers.DevServer] = ServerConfig{
+		Name:          Servers.DevServer,
 		Port:          "8575",
 		DevNodeConfig: devNodeConfig,
 	}
-	registry["LogServer"] = ServerConfig{
-		Name:          "LogServer",
+
+	registry[Servers.LogServer] = ServerConfig{
+		Name:          Servers.LogServer,
 		Port:          "9585",
 		DevNodeConfig: devNodeConfig,
 	}
@@ -61,4 +62,14 @@ func (serverName ServerName) Ping() (*http.Response, error) {
 	pingURL := serverConfig.GetServerUrl("ping")
 	res, err := http.Get(pingURL)
 	return res, err
+}
+
+type ServersName struct {
+	DevServer ServerName
+	LogServer ServerName
+}
+
+var Servers = ServersName{
+	DevServer: "DevServer",
+	LogServer: "LogServer",
 }

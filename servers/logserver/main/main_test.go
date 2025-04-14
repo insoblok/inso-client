@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-var ServerName = config.ServerName("LogServer")
+var ServerName = config.Servers.LogServer
 
 func TestPing(t *testing.T) {
 	res, err := ServerName.Ping()
