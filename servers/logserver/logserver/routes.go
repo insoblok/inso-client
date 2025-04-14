@@ -3,21 +3,19 @@ package logserver
 import (
 	"encoding/json"
 	"eth-toy-client/config"
-	contract "eth-toy-client/core/contracts"
+	"eth-toy-client/core/contracts"
 	"eth-toy-client/core/httpapi"
 	"eth-toy-client/core/logutil"
 	toytypes "eth-toy-client/core/types"
+	"eth-toy-client/servers/servers"
 	"net/http"
 	"time"
 )
-import "eth-toy-client/servers/servers"
 
 func SetupRoutes(config config.ServerConfig, contractRegistry *contract.ContractRegistry) *http.ServeMux {
 	mux := http.NewServeMux()
 	servers.SetupPingRoute(config.Name, mux)
 	mux.HandleFunc("/register-contract", registerContract(contractRegistry))
-	//mux.HandleFunc("/contract", getContract(contractRegistry))
-
 	mux.Handle("/contract/", http.StripPrefix("/contract", getContract(contractRegistry)))
 	return mux
 }
