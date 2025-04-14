@@ -30,9 +30,7 @@ func TestPing(t *testing.T) {
 
 func TestServerConnectionRefused(t *testing.T) {
 	//Need to make sure the server is not running
-	serverConfig := config.GetServerConfig(ServerName)
-	pingURL := serverConfig.GetServerUrl("ping")
-	res, err := http.Get(pingURL)
+	res, err := ServerName.Ping()
 	t.Log(err)
 	t.Log(res)
 	//require.NotNil(t, err, "❌ expected non-nil error when sever is not running "+pingURL)
@@ -40,7 +38,7 @@ func TestServerConnectionRefused(t *testing.T) {
 }
 
 func TestContractAliasNotFound(t *testing.T) {
-	serverConfig := config.GetServerConfig(ServerName)
+	serverConfig := ServerName.GetServerConfig()
 	contractFooURL := serverConfig.GetServerUrl("contract/foo")
 	res, err := http.Get(contractFooURL)
 	require.NoError(t, err, "❌ contract/foo failed")
@@ -52,7 +50,7 @@ func TestContractAliasNotFound(t *testing.T) {
 }
 
 func TestServeInvalidUrl(t *testing.T) {
-	serverConfig := config.GetServerConfig(ServerName)
+	serverConfig := ServerName.GetServerConfig()
 	invalidURL := serverConfig.GetServerUrl("invalid")
 	resp, err := http.Get(invalidURL)
 	require.NoError(t, err, "❌ invalid url failed")
@@ -64,7 +62,7 @@ func TestServeInvalidUrl(t *testing.T) {
 }
 
 func TestRegisterContractAddress(t *testing.T) {
-	serverConfig := config.GetServerConfig(ServerName)
+	serverConfig := ServerName.GetServerConfig()
 	registerURL := serverConfig.GetServerUrl("register-contract")
 	payload := contract.DeployedContractMetaJSON{
 		Alias:     "CounterV2",
