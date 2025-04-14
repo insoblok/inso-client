@@ -17,9 +17,7 @@ import (
 var ServerName = config.ServerName("LogServer")
 
 func TestPing(t *testing.T) {
-	serverConfig := config.GetServerConfig(ServerName)
-	pingURL := serverConfig.GetServerUrl("ping")
-	res, err := http.Get(pingURL)
+	res, err := ServerName.Ping()
 	require.NoError(t, err, "❌ ping failed")
 	require.Equal(t, 200, res.StatusCode, "❌ ping failed")
 

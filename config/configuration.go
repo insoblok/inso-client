@@ -2,9 +2,8 @@ package config
 
 import (
 	"flag"
+	"net/http"
 )
-
-type ServerName string
 
 type DevNodeConfig struct {
 	Port string
@@ -32,7 +31,7 @@ func GetServerConfigFromFlag(name ServerName) ServerConfig {
 	}
 }
 
-func GetServerConfig(name ServerName) ServerConfig {
+func (serverName ServerName) GetServerConfig() ServerConfig {
 	devNodeConfig := DevNodeConfig{
 		Port: "8565",
 	}
@@ -48,9 +47,18 @@ func GetServerConfig(name ServerName) ServerConfig {
 		DevNodeConfig: devNodeConfig,
 	}
 
-	return registry[name]
+	return registry[serverName]
 }
 
 func (config ServerConfig) GetServerUrl(pathSegment string) string {
 	return "http://localhost:" + config.Port + "/" + pathSegment
+}
+
+type ServerName string
+
+func (serverName ServerName) Ping() (*http.Response, error) {
+	serverConfig := serverName.GetServerConfig()
+	pingURL := serverConfig.GetServerUrl("ping")
+	res, err := http.Get(pingURL)
+	return res, err
 }

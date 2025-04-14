@@ -48,7 +48,7 @@ type NodeClient struct {
 }
 
 func EstablishConnectionToDevNode(name config.ServerName) (config.ServerConfig, *NodeClient) {
-	serverConfig := config.GetServerConfig(name)
+	serverConfig := name.GetServerConfig()
 	log.Printf("📡 starting Server: %+v", serverConfig)
 	rpcClient, readyChannel, err := ConnectToDevNode(serverConfig.DevNodeConfig)
 	if err != nil {
