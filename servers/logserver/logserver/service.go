@@ -4,6 +4,8 @@ import (
 	"context"
 	"eth-toy-client/config"
 	contract "eth-toy-client/core/contracts"
+	"eth-toy-client/logbus"
+	"eth-toy-client/logsub"
 	"eth-toy-client/servers/servers"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -19,13 +21,21 @@ func (logServer *LogServer) Name() config.ServerName {
 
 func (logServer *LogServer) InitService(nodeClient *servers.NodeClient, serverConfig config.ServerConfig) (config.ServerConfig, http.Handler) {
 	contractRegistry := contract.NewRegistry()
-	go InitLogListener(nodeClient)
+	broadcaster := logbus.NewLogBroadcaster()
+	chConsole := make(chan logbus.LogEvent, 10)
+	consoleConsumer := &logsub.PrintToConsole{Name: "ConsoleConsumer", Events: chConsole}
+	go consoleConsumer.Consume()
+	broadcaster.Subscribe(chConsole)
+	decoder := &logsub.DefaultDecoder{
+		DecoderFn: logsub.GetDecoderFn(),
+	}
+	go InitLogListener(nodeClient, broadcaster, decoder)
 
 	handlers := SetupRoutes(serverConfig, contractRegistry)
 	return serverConfig, handlers
 }
 
-func InitLogListener(nodeClient *servers.NodeClient) {
+func InitLogListener(nodeClient *servers.NodeClient, broadcaster logbus.LogBroadcaster, decoder *logsub.DefaultDecoder) {
 	logsCh := make(chan types.Log)
 	query := ethereum.FilterQuery{
 		// Add specific contract addresses if needed:
@@ -42,8 +52,15 @@ func InitLogListener(nodeClient *servers.NodeClient) {
 		case err := <-sub.Err():
 			log.Printf("⚠️ Subscription error: %v", err)
 
-		case vLog := <-logsCh:
-			log.Printf("📄 Received log: %+v", vLog)
+		case logEvent := <-logsCh:
+			//log.Printf("📄 Received log: %+v", logEvent)
+			event, errX := decoder.DecodeLog(logEvent)
+			if errX != nil {
+				log.Printf("❌ Failed to decode log: %v", err)
+				continue
+			}
+			broadcaster.Publish(event)
+
 		}
 	}
 }
