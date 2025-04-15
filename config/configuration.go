@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"net/http"
+	"strings"
 )
 
 type DevNodeConfig struct {
@@ -52,6 +53,9 @@ func (serverName ServerName) GetServerConfig() ServerConfig {
 }
 
 func (config ServerConfig) GetServerUrl(pathSegment string) string {
+	if strings.HasPrefix(pathSegment, "/") {
+		return "http://localhost:" + config.Port + pathSegment
+	}
 	return "http://localhost:" + config.Port + "/" + pathSegment
 }
 

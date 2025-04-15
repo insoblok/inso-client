@@ -22,11 +22,10 @@ func DeployContract(
 	checkSum string,
 ) (common.Address, string, error) {
 	req := toytypes.SignTxRequest{
-		From:     fromAlias,
-		To:       "",
-		Value:    "0",
-		Data:     bytecode,
-		Checksum: checkSum,
+		From:  fromAlias,
+		To:    "",
+		Value: "0",
+		Data:  bytecode,
 	}
 
 	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SendTxAPIResponse](

@@ -3,7 +3,6 @@ package devserver
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"eth-toy-client/core/consts"
@@ -264,8 +263,10 @@ func handleSignTx(nodeClient *servers.NodeClient, accounts *map[string]*TestAcco
 		httpapi.WriteOK[toytypes.SignTxAPIResponse](w, resp)
 	}
 }
+
 func handleSendTxAPI(nodeClient *servers.NodeClient, accounts *map[string]*TestAccount) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Headers: %+v\n", r.Header)
 		if r.Method != http.MethodPost {
 			log.Printf("⚠️ Invalid method: %s", r.Method)
 			httpapi.WriteError(w, http.StatusMethodNotAllowed, "MethodNotAllowed", "Only POST is allowed")
@@ -308,21 +309,6 @@ func handleSendTxAPI(nodeClient *servers.NodeClient, accounts *map[string]*TestA
 				log.Printf("❌ Missing contract bytecode in data field")
 				httpapi.WriteError(w, http.StatusBadRequest, "MissingData", "Contract deployment requires 'data' field")
 				return
-			}
-
-			//logutil.Infof("Received Req Bin data: %s", req.Data)
-			dataBytes := []byte(req.Data)
-
-			fmt.Println("Length after []byte(req.Data):", len(dataBytes)) // server
-			checksumBytes := sha256.Sum256(dataBytes)
-			checksum := hex.EncodeToString(checksumBytes[:])
-			logutil.Infof("🔐 Received Checksum from client: %s", req.Checksum)
-			logutil.Infof("🧮 Recomputed Checksum from bytecode: %s", checksum)
-
-			if checksum == req.Checksum {
-				logutil.Infof("✅ Checksum match: bytecode integrity confirmed")
-			} else {
-				logutil.Warnf("⚠️  Checksum mismatch! Possible corruption or encoding error")
 			}
 
 			toAddr = nil
