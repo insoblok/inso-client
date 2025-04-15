@@ -24,7 +24,7 @@ func TestDeployContract(t *testing.T) {
 		From:  "alice",
 		To:    "",
 		Value: "0",
-		Data:  devserver.MockusdcMetaData.Bin,
+		Data:  devserver.MockusdcMetaData.Bin[2:],
 	}
 
 	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SendTxAPIResponse](

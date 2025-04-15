@@ -280,6 +280,8 @@ func handleSendTxAPI(nodeClient *servers.NodeClient, accounts *map[string]*TestA
 			return
 		}
 
+		log.Printf(
+			"🐳 Received Request ", req)
 		from, ok := (*accounts)[req.From]
 		if !ok {
 			log.Printf("⚠️ Sender not found: %s", req.From)
