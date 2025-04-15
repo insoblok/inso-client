@@ -45,6 +45,7 @@ type NodeClient struct {
 	Config    config.DevNodeConfig
 	Client    *ethclient.Client
 	RPCClient *rpc.Client
+	WSClient  *ethclient.Client
 }
 
 func EstablishConnectionToDevNode(name config.ServerName) (config.ServerConfig, *NodeClient) {
@@ -63,11 +64,18 @@ func EstablishConnectionToDevNode(name config.ServerName) (config.ServerConfig, 
 	}
 
 	client := ethclient.NewClient(rpcClient)
+	wsClient, err := ethclient.Dial("ws://127.0.0.1:" + serverConfig.DevNodeConfig.WebSocketPort)
+	if err != nil {
+		log.Fatalf("❌ Failed to connect to WebSocket: %v", err)
+	}
+	log.Println("✅ Connected to Geth via WebSocket")
+
 	return serverConfig,
 		&NodeClient{
 			Config:    serverConfig.DevNodeConfig,
 			Client:    client,
 			RPCClient: rpcClient,
+			WSClient:  wsClient,
 		}
 }
 

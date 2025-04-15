@@ -8,7 +8,8 @@ import (
 )
 
 type DevNodeConfig struct {
-	Port string
+	Port          string
+	WebSocketPort string
 }
 
 func (config DevNodeConfig) GetDevNodeUrl() string {
@@ -44,7 +45,8 @@ func GetServerConfigFromFlag(name ServerName) ServerConfig {
 
 func (serverName ServerName) GetServerConfig() ServerConfig {
 	devNodeConfig := DevNodeConfig{
-		Port: "8565",
+		Port:          "8565",
+		WebSocketPort: "8546",
 	}
 	registry := make(map[ServerName]ServerConfig)
 	registry[Servers.DevServer] = ServerConfig{
