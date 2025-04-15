@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func SetupRoutes(config config.ServerConfig, contractRegistry *contract.ContractRegistry) *http.ServeMux {
+func SetupRoutes(config config.ServerConfig, contractRegistry *contract.Registry) *http.ServeMux {
 	mux := http.NewServeMux()
 	servers.SetupPingRoute(config.Name, mux)
 	mux.HandleFunc("/api/register-contract", registerContract(contractRegistry))
@@ -20,7 +20,7 @@ func SetupRoutes(config config.ServerConfig, contractRegistry *contract.Contract
 	return mux
 }
 
-func getContract(registry *contract.ContractRegistry) http.HandlerFunc {
+func getContract(registry *contract.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		alias := r.URL.Path[len("/"):]
 		if alias == "" {
@@ -36,7 +36,7 @@ func getContract(registry *contract.ContractRegistry) http.HandlerFunc {
 	}
 }
 
-func registerContract(reg *contract.ContractRegistry) http.HandlerFunc {
+func registerContract(reg *contract.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var meta contract.DeployedContractMetaJSON
 		if err := json.NewDecoder(r.Body).Decode(&meta); err != nil {

@@ -264,7 +264,7 @@ func handleSignTx(nodeClient *servers.NodeClient, accounts *map[string]*TestAcco
 	}
 }
 
-func handleRegisterAlias(reg *contract.ContractRegistry) http.HandlerFunc {
+func handleRegisterAlias(reg *contract.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var meta contract.DeployedContractMetaJSON
 		if err := json.NewDecoder(r.Body).Decode(&meta); err != nil {
@@ -297,7 +297,7 @@ func handleRegisterAlias(reg *contract.ContractRegistry) http.HandlerFunc {
 	}
 }
 
-func handleGetContracts(reg *contract.ContractRegistry) http.HandlerFunc {
+func handleGetContracts(reg *contract.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		all := reg.All()
 		summaries := []contract.DeployedContractMetaJSON{}
@@ -312,7 +312,7 @@ func handleGetContracts(reg *contract.ContractRegistry) http.HandlerFunc {
 	}
 }
 
-func handleGetContractByAlias(reg *contract.ContractRegistry) http.HandlerFunc {
+func handleGetContractByAlias(reg *contract.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		alias := strings.TrimPrefix(r.URL.Path, "/api/contracts/")
 		if alias == "" {

@@ -17,7 +17,7 @@ type accountResponse struct {
 
 func SetupRoutes(
 	config config.ServerConfig,
-	reg *contract.ContractRegistry,
+	reg *contract.Registry,
 	devAccount common.Address,
 	nodeClient *servers.NodeClient,
 	accounts *map[string]*TestAccount) *http.ServeMux {

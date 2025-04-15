@@ -103,18 +103,18 @@ type ContractMeta struct {
 	Timestamp time.Time      `json:"timestamp"`
 }
 
-type ContractRegistry struct {
+type Registry struct {
 	mu      sync.RWMutex
 	entries map[string]DeployedContractMetaJSON
 }
 
-func NewRegistry() *ContractRegistry {
-	return &ContractRegistry{
+func NewRegistry() *Registry {
+	return &Registry{
 		entries: make(map[string]DeployedContractMetaJSON),
 	}
 }
 
-func (r *ContractRegistry) Add(meta DeployedContractMetaJSON) error {
+func (r *Registry) Add(meta DeployedContractMetaJSON) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -126,7 +126,7 @@ func (r *ContractRegistry) Add(meta DeployedContractMetaJSON) error {
 	return nil
 }
 
-func (r *ContractRegistry) All() []DeployedContractMetaJSON {
+func (r *Registry) All() []DeployedContractMetaJSON {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -137,7 +137,7 @@ func (r *ContractRegistry) All() []DeployedContractMetaJSON {
 	return entries
 }
 
-func (r *ContractRegistry) Get(alias string) (DeployedContractMetaJSON, bool) {
+func (r *Registry) Get(alias string) (DeployedContractMetaJSON, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	meta, ok := r.entries[alias]
