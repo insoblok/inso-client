@@ -82,7 +82,7 @@ func StartMicroService(microService MicroService) {
 	defer nodeClient.RPCClient.Close()
 	_, handler := microService.InitService(nodeClient, serverConfig)
 	go func() {
-		log.Println("🌐 " + string(serverConfig.Name) + "You can ping http://localhost:" + serverConfig.Port + "/ping ...")
+		log.Println("🌐 " + string(serverConfig.Name) + " You can ping http://localhost:" + serverConfig.Port + "/ping ...")
 		err := http.ListenAndServe(":"+serverConfig.Port, handler)
 		if err != nil {
 			log.Fatalf("❌ Failed to start HTTP server: %v", err)
