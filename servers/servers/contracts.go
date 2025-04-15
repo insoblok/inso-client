@@ -12,7 +12,7 @@ func RegisterContract(payload contract.DeployedContractMetaJSON) (*toytypes.Alia
 	return httpapi.PostWithAPIResponse[toytypes.AliasRegisterResponse](registerURL, payload)
 }
 
-func GetContract(alias string) (*contract.DeployedContractMetaJSON, *httpapi.APIError, error) {
-	contractURL := config.Servers.LogServer.GetServerConfig().GetServerUrl("contract/" + alias)
+func GetContract(contractAddress toytypes.ContractAddress) (*contract.DeployedContractMetaJSON, *httpapi.APIError, error) {
+	contractURL := config.Servers.LogServer.GetServerConfig().GetServerUrl("contract/" + contractAddress.Address)
 	return httpapi.PostWithAPIResponseNoPayload[contract.DeployedContractMetaJSON](contractURL)
 }

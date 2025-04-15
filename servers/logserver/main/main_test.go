@@ -5,6 +5,7 @@ import (
 	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/core/httpapi"
 	"eth-toy-client/core/logutil"
+	toytypes "eth-toy-client/core/types"
 	"eth-toy-client/kit/mockusdc"
 	"eth-toy-client/servers/servers"
 	"github.com/stretchr/testify/require"
@@ -71,7 +72,6 @@ func TestRegisterContractAddress(t *testing.T) {
 		Bytecode:  mockusdc.MockusdcMetaData.Bin,
 		Timestamp: 1234567890,
 		Owner:     "0x1234567890123456789012345678901234567890",
-		Overwrite: true,
 	}
 
 	res, apiError, err := servers.RegisterContract(payload)
@@ -80,7 +80,8 @@ func TestRegisterContractAddress(t *testing.T) {
 	require.Equal(t, "ok", res.Status, "❌ register contract failed")
 	require.Equal(t, "CounterV2", res.Alias, "❌ register contract failed")
 
-	res2, apiError, err := servers.GetContract(payload.Alias)
+	contractAddress := toytypes.ContractAddress{Address: payload.Address}
+	res2, apiError, err := servers.GetContract(contractAddress)
 	require.NoError(t, err, "❌ failed to get contract, expected nil error")
 	require.Nil(t, apiError, "❌ failed to get contract, expected nil apiError")
 	require.Equal(t, &payload, res2, "❌ payload mismatch")

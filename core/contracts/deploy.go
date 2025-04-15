@@ -158,5 +158,4 @@ type DeployedContractMetaJSON struct {
 	Bytecode  string `json:"bytecode"`
 	Timestamp int64  `json:"timestamp"`
 	Owner     string `json:"owner"`
-	Overwrite bool   `json:"overwrite"`
 }
