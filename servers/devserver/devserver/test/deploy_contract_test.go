@@ -18,7 +18,7 @@ var ServerName = config.Servers.DevServer
 
 func TestDeployContract(t *testing.T) {
 	serverConfig := ServerName.GetServerConfig()
-	apiSendTxURL := serverConfig.GetServerUrl("api/send-tx")
+	apiSendTxURL := serverConfig.GetServerUrl("api/deploy-contract")
 
 	req := toytypes.SignTxRequest{
 		From:  "alice",

@@ -31,6 +31,7 @@ func SetupRoutes(
 	mux.HandleFunc("/send-tx", handleSendTx(nodeClient, accounts))
 	mux.HandleFunc("/api/sign-tx", handleSignTx(nodeClient, accounts))
 	mux.HandleFunc("/api/send-tx", handleSendTxAPI(nodeClient, accounts))
+	mux.HandleFunc("/api/deploy-contract", deployContract(nodeClient, accounts))
 	mux.HandleFunc("/api/register-alias", handleRegisterAlias(reg))
 	mux.HandleFunc("/api/contracts", handleGetContracts(reg))
 	mux.HandleFunc("/api/contracts/", handleGetContractByAlias(reg))
