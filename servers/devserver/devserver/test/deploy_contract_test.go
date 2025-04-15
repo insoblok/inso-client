@@ -20,14 +20,12 @@ func TestDeployContract(t *testing.T) {
 	serverConfig := ServerName.GetServerConfig()
 	apiSendTxURL := serverConfig.GetServerUrl("api/deploy-contract")
 
-	req := toytypes.SignTxRequest{
-		From:  "alice",
-		To:    "",
-		Value: "0",
-		Data:  devserver.MockusdcMetaData.Bin[2:],
+	req := toytypes.DeployContractRequest{
+		From: "alice",
+		Data: devserver.MockusdcMetaData.Bin[2:],
 	}
 
-	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.SendTxAPIResponse](
+	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.ContractDeploymentResponse](
 		apiSendTxURL,
 		req,
 	)
@@ -35,8 +33,10 @@ func TestDeployContract(t *testing.T) {
 	require.Nil(t, apiErr, "❌ Error sending tx")
 	require.NotNil(t, apiResp, "❌ Error sending tx")
 	require.NotEmpty(t, apiResp.TxHash, "❌ TxHash is empty")
+	require.NotEmpty(t, apiResp.ExpectedContractAddress)
 
 	t.Logf("✅ℹ️Received Tx Hash: %s\n", apiResp.TxHash)
+	t.Logf("✅ℹ️Expected Contract Address: %s\n", apiResp.ExpectedContractAddress)
 
 	client, err := serverConfig.DevNodeConfig.GetEthClient()
 	require.NoError(t, err, "❌ Error connecting to dev node")
@@ -65,6 +65,7 @@ func TestDeployContract(t *testing.T) {
 	}
 
 	require.Equal(t, uint64(1), receipt.Status, "❌ transaction failed, status: %d", receipt.Status)
+	require.Equal(t, apiResp.ExpectedContractAddress, receipt.ContractAddress.Hex(), "❌ contract address mismatch")
 
 	code, err := client.CodeAt(ctx, receipt.ContractAddress, nil)
 	require.NoError(t, err, "❌ failed to fetch contract code")

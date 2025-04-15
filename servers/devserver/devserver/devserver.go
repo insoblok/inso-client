@@ -139,6 +139,52 @@ func BuildAndSignTx(
 	return tx, signedTx, nil
 }
 
+func SignContract(
+	privKey *ecdsa.PrivateKey,
+	from common.Address,
+	rpcPort string,
+	data []byte, // ✅ Optional data (contract bytecode or calldata)
+) (*types.Transaction, *common.Address, *types.Transaction, error) {
+	client, err := ethclient.Dial("http://localhost:" + rpcPort)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to connect to dev node: %w", err)
+	}
+	defer client.Close()
+
+	ctx := context.Background()
+
+	nonce, err := client.PendingNonceAt(ctx, from)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to get nonce: %w", err)
+	}
+
+	chainID, err := client.ChainID(ctx)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to get chain ID: %w", err)
+	}
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   chainID,
+		Nonce:     nonce,
+		GasTipCap: big.NewInt(1),
+		GasFeeCap: big.NewInt(1_000_000_000), // 1 gwei
+		Gas:       3_000_000,                 // ⛽ for deployment or interaction
+		To:        nil,
+		Value:     big.NewInt(0),
+		Data:      data, // 🧠 smart contract bytecode or calldata
+	})
+
+	signedTx, err := SignTx(chainID, tx, privKey)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to sign tx: %w", err)
+	}
+
+	address := crypto.CreateAddress(from, nonce)
+	log.Printf(
+		"Expected address: %s\n", address)
+	return tx, &address, signedTx, nil
+}
+
 func SignTx(chainID servers.ChainId, rawTx *types.Transaction, key *ecdsa.PrivateKey) (*types.Transaction, error) {
 	singer := types.NewPragueSigner(chainID)
 	digest := singer.Hash(rawTx).Bytes()

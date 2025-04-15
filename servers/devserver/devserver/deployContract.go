@@ -9,7 +9,6 @@ import (
 	toytypes "eth-toy-client/core/types"
 	"eth-toy-client/servers/servers"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
 	"log"
 	"math/big"
 	"net/http"
@@ -24,7 +23,7 @@ func deployContract(nodeClient *servers.NodeClient, accounts *map[string]*TestAc
 			return
 		}
 
-		var req toytypes.SignTxRequest
+		var req toytypes.DeployContractRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			log.Printf("❌ Failed to decode JSON: %v", err)
 			httpapi.WriteError(w, http.StatusBadRequest, "InvalidRequest", "Invalid JSON payload")
@@ -39,54 +38,18 @@ func deployContract(nodeClient *servers.NodeClient, accounts *map[string]*TestAc
 		}
 
 		val := new(big.Int)
-		if req.Value == "" {
-			val.SetInt64(0)
-		} else if _, ok := val.SetString(req.Value, 10); !ok {
-			log.Printf("❌ Invalid value format: %s", req.Value)
-			httpapi.WriteError(w, http.StatusBadRequest, "InvalidValue", "Invalid value format")
-			return
+		val.SetInt64(0)
+		rawByte := []byte(req.Data)
+		if (len(rawByte) % 2) == 1 {
+			rawByte = append([]byte("0"), rawByte...)
 		}
 
-		var (
-			toAddr *common.Address
-			data   []byte
-		)
+		destHexByte := make([]byte, len(rawByte)/2)
+		hex.Decode(destHexByte, rawByte)
+		data := destHexByte
+		logutil.Infof("Hex Bytes Length: %d", len(data))
 
-		if req.To == "" {
-			// 🚀 Contract Deployment
-			log.Printf("📨 /send-tx: deploying contract from=%s", req.From)
-
-			if req.Data == "" {
-				log.Printf("❌ Missing contract bytecode in data field")
-				httpapi.WriteError(w, http.StatusBadRequest, "MissingData", "Contract deployment requires 'data' field")
-				return
-			}
-
-			toAddr = nil
-			rawByte := []byte(req.Data)
-			if (len(rawByte) % 2) == 1 {
-				rawByte = append([]byte("0"), rawByte...)
-			}
-
-			destHexByte := make([]byte, len(rawByte)/2)
-			hex.Decode(destHexByte, rawByte)
-			data = destHexByte
-			logutil.Infof("Hex Bytes Length: %d", len(data))
-
-		} else {
-			// 🔁 Normal Transfer
-			toAccount, ok := (*accounts)[req.To]
-			if !ok {
-				log.Printf("⚠️ Recipient not found: %s", req.To)
-				httpapi.WriteError(w, http.StatusBadRequest, "InvalidAccount", fmt.Sprintf("Recipient '%s' not found", req.To))
-				return
-			}
-			addr := toAccount.Address
-			toAddr = &addr
-			log.Printf("📨 /send-tx: from=%s → to=%s | value=%s", req.From, req.To, req.Value)
-		}
-
-		_, signedTx, err := BuildAndSignTx(from.PrivKey, from.Address, toAddr, val, nodeClient.Config.Port, data)
+		_, contractAddress, signedTx, err := SignContract(from.PrivKey, from.Address, nodeClient.Config.Port, data)
 		if err != nil {
 			log.Printf("❌ Signing failed: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())
@@ -102,8 +65,9 @@ func deployContract(nodeClient *servers.NodeClient, accounts *map[string]*TestAc
 
 		log.Printf("✅ Sent TX: %s", signedTx.Hash().Hex())
 
-		httpapi.WriteOK[toytypes.SendTxAPIResponse](w, &toytypes.SendTxAPIResponse{
-			TxHash: signedTx.Hash().Hex(),
+		httpapi.WriteOK[toytypes.ContractDeploymentResponse](w, &toytypes.ContractDeploymentResponse{
+			TxHash:                  signedTx.Hash().Hex(),
+			ExpectedContractAddress: contractAddress.Hex(),
 		})
 	}
 }

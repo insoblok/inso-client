@@ -15,8 +15,17 @@ type SignTxRequest struct {
 	Type    string  `json:"type,omitempty"`    // e.g. "deploy", "call", "raw"
 }
 
+type DeployContractRequest struct {
+	From string `json:"from"`           // alias, e.g. "alice"
+	Data string `json:"data,omitempty"` // hex-encoded bytecode or calldata
+}
+
 type SendTxAPIResponse struct {
 	TxHash string `json:"txHash"`
+}
+type ContractDeploymentResponse struct {
+	TxHash                  string `json:"txHash"`
+	ExpectedContractAddress string `json:"expectedContractAddress"`
 }
 
 type AliasRegisterResponse struct {
