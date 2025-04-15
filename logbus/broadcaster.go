@@ -1,6 +1,9 @@
 package logbus
 
-import "sync"
+import (
+	"github.com/ethereum/go-ethereum/core/types"
+	"sync"
+)
 
 type LogEvent struct {
 	Contract  string                 // Optional: contract name or address
@@ -9,6 +12,7 @@ type LogEvent struct {
 	Timestamp int64                  // Optional: unix time
 	Args      map[string]interface{} // Decoded args (message, value, etc.)
 	LogType   LogType                // Log type (Transaction, Event, etc.)
+	Log       types.Log
 }
 
 type LogBroadcaster interface {

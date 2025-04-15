@@ -149,7 +149,13 @@ type PrintToConsole struct {
 
 func (p *PrintToConsole) Consume() {
 	for event := range p.Events {
-		log.Printf("🚀 %s received event: %v with TxHash: %s", p.Name, event.LogType, event.TxHash)
+		log.Printf(
+			"🚀 %s received event: %v, address:%s, TxHash:%s and Args:%v",
+			p.Name,
+			event.LogType,
+			event.Contract,
+			event.TxHash,
+			event.Args)
 	}
 }
 
