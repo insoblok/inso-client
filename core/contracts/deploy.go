@@ -19,7 +19,6 @@ func DeployContract(
 	serverURL string,
 	fromAlias string,
 	bytecode string,
-	checkSum string,
 ) (common.Address, string, error) {
 	req := toytypes.SignTxRequest{
 		From:  fromAlias,

@@ -48,7 +48,6 @@ type DeployOptions struct {
 type BuildResult struct {
 	BuildDir     string
 	ContractName string
-	Checksum     string // 🔐 SHA-256 of .bin content
 }
 
 func CompileContract(opts CompileOptions) (*BuildResult, error) {
@@ -111,7 +110,6 @@ func CompileContract(opts CompileOptions) (*BuildResult, error) {
 	return &BuildResult{
 		BuildDir:     buildDir,
 		ContractName: contractName,
-		Checksum:     checksum,
 	}, nil
 }
 
@@ -171,15 +169,12 @@ func RunAliasDeploy(alias string, compileOpts CompileOptions, opts DeployOptions
 	//logutil.Infof("Bytecode: string %s", byteCodeString)
 	fmt.Println("Length of original bytecode:", len(bytecode)) // client
 
-	logutil.Infof("Sending Bytecode: Checksum %s", result.Checksum)
-
 	addr, txHash, err := contract.DeployContract(
 		context.Background(),
 		devCtx.Client,
 		devCtx.ServerURL,
 		devCtx.FromAlias,
-		byteCodeString,
-		result.Checksum)
+		byteCodeString)
 	if err != nil {
 		return logutil.ErrorErrf("contract deployment failed: %w", err)
 	}
@@ -239,15 +234,12 @@ func RunDeploy(compileOpts CompileOptions, opts DeployOptions) error {
 		return logutil.ErrorErrf("failed to read bin file: %w", err)
 	}
 
-	logutil.Infof("Bytecode: Checksum %s", result.Checksum)
-
 	addr, txHash, err := contract.DeployContract(
 		context.Background(),
 		devCtx.Client,
 		devCtx.ServerURL,
 		devCtx.FromAlias,
-		"0x"+hex.EncodeToString(bytecode),
-		result.Checksum)
+		"0x"+hex.EncodeToString(bytecode))
 	if err != nil {
 		return logutil.ErrorErrf("contract deployment failed: %w", err)
 	}

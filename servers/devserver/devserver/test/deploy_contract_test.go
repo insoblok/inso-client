@@ -36,7 +36,7 @@ func TestDeployContract(t *testing.T) {
 	require.NotNil(t, apiResp, "❌ Error sending tx")
 	require.NotEmpty(t, apiResp.TxHash, "❌ TxHash is empty")
 
-	t.Logf("Received Tx Hash: %s\n", apiResp.TxHash)
+	t.Logf("✅ℹ️Received Tx Hash: %s\n", apiResp.TxHash)
 
 	client, err := serverConfig.DevNodeConfig.GetEthClient()
 	require.NoError(t, err, "❌ Error connecting to dev node")
@@ -53,15 +53,15 @@ func TestDeployContract(t *testing.T) {
 
 	require.NotNil(t, receipt, "❌🧾 ⏱️ timeout waiting for tx %s", apiResp.TxHash)
 
-	t.Log("Transaction Receipt Details:")
-	t.Logf("  Status: %d\n", receipt.Status) // Status: 1 (success) or 0 (failure)
-	t.Logf("  Transaction Hash: %s\n", receipt.TxHash.Hex())
-	t.Logf("  Contract Address: %s\n", receipt.ContractAddress.Hex())
-	t.Logf("  Block Number: %d\n", receipt.BlockNumber.Uint64())
-	t.Logf("  Gas Used: %d\n", receipt.GasUsed)
-	t.Logf("  Logs:")
+	t.Log("ℹ️Transaction Receipt Details:")
+	t.Logf("  ℹ️Status: %d\n", receipt.Status) // Status: 1 (success) or 0 (failure)
+	t.Logf("  ℹ️Transaction Hash: %s\n", receipt.TxHash.Hex())
+	t.Logf("  ℹ️Contract Address: %s\n", receipt.ContractAddress.Hex())
+	t.Logf("  ℹ️Block Number: %d\n", receipt.BlockNumber.Uint64())
+	t.Logf("  ℹ️Gas Used: %d\n", receipt.GasUsed)
+	t.Logf("  ℹ️Logs:")
 	for i, log := range receipt.Logs {
-		t.Logf("    Log #%d: %+v\n", i, log)
+		t.Logf("    ℹ️Log #%d: %+v\n", i, log)
 	}
 
 	require.Equal(t, uint64(1), receipt.Status, "❌ transaction failed, status: %d", receipt.Status)
@@ -69,7 +69,7 @@ func TestDeployContract(t *testing.T) {
 	code, err := client.CodeAt(ctx, receipt.ContractAddress, nil)
 	require.NoError(t, err, "❌ failed to fetch contract code")
 	require.NotNil(t, code, "❌ code is nil")
-	logutil.Infof("contract code: %x", string(code))
+	logutil.Infof("ℹ️contract code: %x", string(code))
 	require.True(t, len(code) > 0, "❌ empty contract code")
 
 }
