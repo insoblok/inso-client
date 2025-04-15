@@ -43,8 +43,8 @@ func registerContract(reg *contract.ContractRegistry) http.HandlerFunc {
 			httpapi.WriteError(w, 400, "❌ InvalidRequest", "Could not parse JSON")
 			return
 		}
-		if meta.Alias == "" || meta.Address == "" || meta.TxHash == "" {
-			httpapi.WriteError(w, 400, "❌ MissingFields", "Alias, address, and txHash are required")
+		if meta.Alias == "" || meta.Address == "" {
+			httpapi.WriteError(w, 400, "❌ MissingFields", "Alias, address are required")
 			return
 		}
 		if meta.Timestamp == 0 {

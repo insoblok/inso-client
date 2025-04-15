@@ -29,14 +29,9 @@ func GetNonce(serverConfig config.ServerConfig, alias string) (*toytypes.Pending
 func RegisterContractAddress(alias string, serverConfig config.ServerConfig, address string, abi string) (*toytypes.AliasRegisterResponse, *httpapi.APIError, error) {
 	registerContractURL := serverConfig.GetServerUrl("api/register-contract")
 	req := contract.DeployedContractMetaJSON{
-		Alias:     alias,
-		Address:   address,
-		ABI:       abi,
-		TxHash:    "0x000",
-		Owner:     "",
-		Bytecode:  "",
-		Timestamp: time.Now().Unix(),
-		Overwrite: true,
+		Alias:   alias,
+		Address: address,
+		ABI:     abi,
 	}
 	return httpapi.PostWithAPIResponse[toytypes.AliasRegisterResponse](
 		registerContractURL,

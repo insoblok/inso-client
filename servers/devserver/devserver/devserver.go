@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"log"
 	"math/big"
-	"strconv"
 	"strings"
 )
 
@@ -143,7 +142,7 @@ func BuildAndSignTx(
 func SignContract(
 	privKey *ecdsa.PrivateKey,
 	from common.Address,
-	nonce string,
+	nonce *uint64,
 	rpcPort string,
 	data []byte, // ✅ Optional data (contract bytecode or calldata)
 ) (*types.Transaction, *common.Address, *types.Transaction, error) {
@@ -160,14 +159,14 @@ func SignContract(
 		return nil, nil, nil, fmt.Errorf("failed to get chain ID: %w", err)
 	}
 
-	nonceUINT64, err := strconv.ParseUint(nonce, 10, 64)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to parse nonce as uint64: %w", err)
-	}
+	//nonceUINT64, err := strconv.ParseUint(nonce, 10, 64)
+	//if err != nil {
+	//	return nil, nil, nil, fmt.Errorf("failed to parse nonce as uint64: %w", err)
+	//}
 
 	tx := types.NewTx(&types.DynamicFeeTx{
 		ChainID:   chainID,
-		Nonce:     nonceUINT64,
+		Nonce:     *nonce,
 		GasTipCap: big.NewInt(1),
 		GasFeeCap: big.NewInt(1_000_000_000), // 1 gwei
 		Gas:       3_000_000,                 // ⛽ for deployment or interaction
@@ -181,7 +180,7 @@ func SignContract(
 		return nil, nil, nil, fmt.Errorf("failed to sign tx: %w", err)
 	}
 
-	address := crypto.CreateAddress(from, nonceUINT64)
+	address := crypto.CreateAddress(from, *nonce)
 	log.Printf(
 		"Expected address: %s\n", address)
 	return tx, &address, signedTx, nil

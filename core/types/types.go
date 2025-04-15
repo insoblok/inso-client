@@ -20,14 +20,14 @@ type PendingNonceRequest struct {
 }
 
 type PendingNonceResponse struct {
-	Nonce   string `json:"nonce"`
-	Address string `json:"address"`
+	Nonce   *uint64 `json:"nonce"`
+	Address string  `json:"address"`
 }
 
 type DeployContractRequest struct {
-	From  string `json:"from"` // alias, e.g. "alice"
-	Nonce string `json:"nonce"`
-	Data  string `json:"data"` // hex-encoded bytecode
+	From  string  `json:"from"` // alias, e.g. "alice"
+	Nonce *uint64 `json:"nonce"`
+	Data  string  `json:"data"` // hex-encoded bytecode
 }
 
 type SendTxAPIResponse struct {

@@ -41,10 +41,10 @@ func handlePendingNonce(nodeClient *servers.NodeClient, accounts *map[string]*Te
 			return
 		}
 
-		nonceStr := fmt.Sprintf("%d", nonce)
+		//nonceStr := fmt.Sprintf("%d", nonce)
 		address := crypto.CreateAddress(from.Address, nonce)
 		response := toytypes.PendingNonceResponse{
-			Nonce:   nonceStr,
+			Nonce:   &nonce,
 			Address: address.Hex(),
 		}
 		log.Printf("Sending nonce: %v", response)
