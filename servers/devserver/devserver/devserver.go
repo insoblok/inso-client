@@ -116,6 +116,10 @@ func BuildAndSignTx(
 		return nil, nil, fmt.Errorf("failed to get chain ID: %w", err)
 	}
 
+	address := crypto.CreateAddress(from, nonce)
+	log.Printf(
+		"Expected address: %s\n", address)
+
 	tx := types.NewTx(&types.DynamicFeeTx{
 		ChainID:   chainID,
 		Nonce:     nonce,
