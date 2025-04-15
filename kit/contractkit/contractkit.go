@@ -190,7 +190,6 @@ func RunAliasDeploy(alias string, compileOpts CompileOptions, opts DeployOptions
 		Bytecode:  byteCodeString,
 		Timestamp: time.Now().Unix(),
 		Owner:     opts.FromAlias,
-		Overwrite: true,
 	}
 
 	_, apiErr, err := httpapi.PostWithAPIResponse[any](devCtx.ServerURL+"/api/register-alias", meta)
