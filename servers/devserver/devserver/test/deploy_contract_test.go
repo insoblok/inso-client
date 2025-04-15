@@ -9,7 +9,6 @@ import (
 	devserver "eth-toy-client/servers/devserver/devserver/test/contracts/mockusdc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -37,7 +36,9 @@ func TestDeployContract(t *testing.T) {
 	require.NotNil(t, apiResp, "❌ Error sending tx")
 	require.NotEmpty(t, apiResp.TxHash, "❌ TxHash is empty")
 
-	client, err := ethclient.Dial(serverConfig.DevNodeConfig.Port)
+	t.Logf("Received Tx Hash: %s\n", apiResp.TxHash)
+
+	client, err := serverConfig.DevNodeConfig.GetEthClient()
 	require.NoError(t, err, "❌ Error connecting to dev node")
 	ctx := context.Background()
 
@@ -63,11 +64,12 @@ func TestDeployContract(t *testing.T) {
 		t.Logf("    Log #%d: %+v\n", i, log)
 	}
 
-	require.Equal(t, 1, receipt.Status, "❌ transaction failed, status: %d", receipt.Status)
+	require.Equal(t, uint64(1), receipt.Status, "❌ transaction failed, status: %d", receipt.Status)
 
 	code, err := client.CodeAt(ctx, receipt.ContractAddress, nil)
 	require.NoError(t, err, "❌ failed to fetch contract code")
 	require.NotNil(t, code, "❌ code is nil")
-	require.True(t, len(code) > 0, "❌ empty contract code")
 	logutil.Infof("contract code: %x", string(code))
+	require.True(t, len(code) > 0, "❌ empty contract code")
+
 }

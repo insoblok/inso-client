@@ -2,12 +2,22 @@ package config
 
 import (
 	"flag"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"net/http"
 	"strings"
 )
 
 type DevNodeConfig struct {
 	Port string
+}
+
+func (config DevNodeConfig) GetDevNodeUrl() string {
+	return "http://localhost:" + config.Port
+}
+
+func (config DevNodeConfig) GetEthClient() (*ethclient.Client, error) {
+	ethClient, err := ethclient.Dial(config.GetDevNodeUrl())
+	return ethClient, err
 }
 
 type ServerConfig struct {
