@@ -314,15 +314,15 @@ func handleGetContracts(reg *contract.Registry) http.HandlerFunc {
 
 func handleGetContractByAlias(reg *contract.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		alias := strings.TrimPrefix(r.URL.Path, "/api/contracts/")
-		if alias == "" {
-			httpapi.WriteError(w, 400, "MissingAlias", "Alias is required in the path")
+		address := strings.TrimPrefix(r.URL.Path, "/api/contracts/")
+		if address == "" {
+			httpapi.WriteError(w, 400, "MissingContract", "Contract address is required in the path")
 			return
 		}
-
-		meta, ok := reg.Get(alias)
+		contractAddress := toytypes.ContractAddress{Address: address}
+		meta, ok := reg.Get(contractAddress)
 		if !ok {
-			httpapi.WriteError(w, 404, "NotFound", fmt.Sprintf("Alias '%s' not found", alias))
+			httpapi.WriteError(w, 404, "NotFound", fmt.Sprintf("Address '%s' not found", contractAddress.Address))
 			return
 		}
 

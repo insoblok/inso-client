@@ -105,24 +105,24 @@ type ContractMeta struct {
 
 type Registry struct {
 	mu      sync.RWMutex
-	entries map[string]DeployedContractMetaJSON
+	entries map[toytypes.ContractAddress]DeployedContractMetaJSON
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		entries: make(map[string]DeployedContractMetaJSON),
+		entries: make(map[toytypes.ContractAddress]DeployedContractMetaJSON),
 	}
 }
 
 func (r *Registry) Add(meta DeployedContractMetaJSON) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	if _, exists := r.entries[meta.Alias]; exists && !meta.Overwrite {
-		return fmt.Errorf("alias already exists: %s", meta.Alias)
+	contractAddress := toytypes.ContractAddress{Address: meta.Address}
+	if _, exists := r.entries[contractAddress]; exists {
+		return fmt.Errorf("ContractAddress already exists: %s", contractAddress.Address)
 	}
 
-	r.entries[meta.Alias] = meta
+	r.entries[contractAddress] = meta
 	return nil
 }
 
@@ -137,10 +137,10 @@ func (r *Registry) All() []DeployedContractMetaJSON {
 	return entries
 }
 
-func (r *Registry) Get(alias string) (DeployedContractMetaJSON, bool) {
+func (r *Registry) Get(contractAddress toytypes.ContractAddress) (DeployedContractMetaJSON, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	meta, ok := r.entries[alias]
+	meta, ok := r.entries[contractAddress]
 	return meta, ok
 }
 

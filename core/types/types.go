@@ -1,5 +1,9 @@
 package types
 
+type ContractAddress struct {
+	Address string `json:"address"`
+}
+
 type SignTxAPIResponse struct {
 	SignedTx string `json:"signedTx"`
 	TxHash   string `json:"txHash"`

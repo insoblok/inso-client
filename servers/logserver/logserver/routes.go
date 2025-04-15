@@ -22,17 +22,18 @@ func SetupRoutes(config config.ServerConfig, contractRegistry *contract.Registry
 
 func getContract(registry *contract.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		alias := r.URL.Path[len("/"):]
-		if alias == "" {
+		address := r.URL.Path[len("/"):]
+		if address == "" {
 			httpapi.WriteError(w, 400, "❌ MissingAlias", "Alias must be specified in the path")
 			return
 		}
-		reg, err := registry.Get(alias)
+		contactAddress := toytypes.ContractAddress{Address: address}
+		meta, err := registry.Get(contactAddress)
 		if !err {
-			httpapi.WriteError(w, 404, "❌ AliasNotFound", "Failed to get alias "+alias)
+			httpapi.WriteError(w, 404, "❌ AliasNotFound", "Failed to get contract address "+contactAddress.Address)
 			return
 		}
-		httpapi.WriteOK(w, &reg)
+		httpapi.WriteOK(w, &meta)
 	}
 }
 
