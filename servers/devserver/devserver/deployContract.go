@@ -10,7 +10,6 @@ import (
 	"eth-toy-client/servers/servers"
 	"fmt"
 	"log"
-	"math/big"
 	"net/http"
 )
 
@@ -37,8 +36,6 @@ func deployContract(nodeClient *servers.NodeClient, accounts *map[string]*TestAc
 			return
 		}
 
-		val := new(big.Int)
-		val.SetInt64(0)
 		rawByte := []byte(req.Data)
 		if (len(rawByte) % 2) == 1 {
 			rawByte = append([]byte("0"), rawByte...)
@@ -49,7 +46,7 @@ func deployContract(nodeClient *servers.NodeClient, accounts *map[string]*TestAc
 		data := destHexByte
 		logutil.Infof("Hex Bytes Length: %d", len(data))
 
-		_, contractAddress, signedTx, err := SignContract(from.PrivKey, from.Address, nodeClient.Config.Port, data)
+		_, contractAddress, signedTx, err := SignContract(from.PrivKey, from.Address, req.Nonce, nodeClient.Config.Port, data)
 		if err != nil {
 			log.Printf("❌ Signing failed: %v", err)
 			httpapi.WriteError(w, http.StatusInternalServerError, "SigningFailed", err.Error())

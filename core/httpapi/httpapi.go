@@ -71,6 +71,8 @@ func PostWithAPIResponse[T any](url string, payload any) (*T, *APIError, error) 
 	}
 	defer resp.Body.Close()
 
+	//log.Printf("Response: %v", resp)
+
 	return ParseAPIResponse[T](resp)
 }
 

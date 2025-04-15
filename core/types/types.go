@@ -15,14 +15,25 @@ type SignTxRequest struct {
 	Type    string  `json:"type,omitempty"`    // e.g. "deploy", "call", "raw"
 }
 
+type PendingNonceRequest struct {
+	Alias string `json:"alias"`
+}
+
+type PendingNonceResponse struct {
+	Nonce   string `json:"nonce"`
+	Address string `json:"address"`
+}
+
 type DeployContractRequest struct {
-	From string `json:"from"`           // alias, e.g. "alice"
-	Data string `json:"data,omitempty"` // hex-encoded bytecode or calldata
+	From  string `json:"from"` // alias, e.g. "alice"
+	Nonce string `json:"nonce"`
+	Data  string `json:"data"` // hex-encoded bytecode
 }
 
 type SendTxAPIResponse struct {
 	TxHash string `json:"txHash"`
 }
+
 type ContractDeploymentResponse struct {
 	TxHash                  string `json:"txHash"`
 	ExpectedContractAddress string `json:"expectedContractAddress"`

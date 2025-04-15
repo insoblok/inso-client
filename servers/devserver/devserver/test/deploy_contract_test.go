@@ -3,6 +3,7 @@ package devserver
 import (
 	"context"
 	"eth-toy-client/config"
+	contract "eth-toy-client/core/contracts"
 	"eth-toy-client/core/httpapi"
 	"eth-toy-client/core/logutil"
 	toytypes "eth-toy-client/core/types"
@@ -14,21 +15,63 @@ import (
 	"time"
 )
 
-var ServerName = config.Servers.DevServer
+func GetNonce(serverConfig config.ServerConfig, alias string) (*toytypes.PendingNonceResponse, *httpapi.APIError, error) {
+	pendingNonceUrl := serverConfig.GetServerUrl("api/pending-nonce")
+	req := toytypes.PendingNonceRequest{
+		Alias: alias,
+	}
+	return httpapi.PostWithAPIResponse[toytypes.PendingNonceResponse](
+		pendingNonceUrl,
+		req,
+	)
+}
+
+func RegisterContractAddress(alias string, serverConfig config.ServerConfig, address string, abi string) (*toytypes.AliasRegisterResponse, *httpapi.APIError, error) {
+	registerContractURL := serverConfig.GetServerUrl("api/register-contract")
+	req := contract.DeployedContractMetaJSON{
+		Alias:     alias,
+		Address:   address,
+		ABI:       abi,
+		TxHash:    "0x000",
+		Owner:     "",
+		Bytecode:  "",
+		Timestamp: time.Now().Unix(),
+		Overwrite: true,
+	}
+	return httpapi.PostWithAPIResponse[toytypes.AliasRegisterResponse](
+		registerContractURL,
+		req,
+	)
+}
 
 func TestDeployContract(t *testing.T) {
-	serverConfig := ServerName.GetServerConfig()
-	apiSendTxURL := serverConfig.GetServerUrl("api/deploy-contract")
+	devServerConfig := config.Servers.DevServer.GetServerConfig()
+	alias := "alice"
+
+	pendingNonce, pendingApiError, err := GetNonce(devServerConfig, alias)
+	require.NoError(t, err, "❌ Failed to get pending nonce")
+	require.Nil(t, pendingApiError, "❌ APIError Failed to get pending nonce")
+	require.NotNil(t, pendingNonce, "❌ PendingNonce is nil")
+
+	logServerConfig := config.Servers.LogServer.GetServerConfig()
+	aliasRegisterResponse, aliasApiError, err := RegisterContractAddress(alias, logServerConfig, pendingNonce.Address, devserver.MockusdcMetaData.ABI)
+	require.NoError(t, err, "❌ Failed to register contract address")
+	require.Nil(t, aliasApiError, "❌ APIError Failed to register contract address")
+	require.NotNil(t, aliasRegisterResponse, "❌ AliasRegisterResponse is nil")
+
+	apiSendTxURL := devServerConfig.GetServerUrl("api/deploy-contract")
 
 	req := toytypes.DeployContractRequest{
-		From: "alice",
-		Data: devserver.MockusdcMetaData.Bin[2:],
+		From:  alias,
+		Nonce: pendingNonce.Nonce,
+		Data:  devserver.MockusdcMetaData.Bin[2:],
 	}
 
 	apiResp, apiErr, err := httpapi.PostWithAPIResponse[toytypes.ContractDeploymentResponse](
 		apiSendTxURL,
 		req,
 	)
+
 	require.NoError(t, err, "❌ Error sending tx")
 	require.Nil(t, apiErr, "❌ Error sending tx")
 	require.NotNil(t, apiResp, "❌ Error sending tx")
@@ -38,10 +81,9 @@ func TestDeployContract(t *testing.T) {
 	t.Logf("✅ℹ️Received Tx Hash: %s\n", apiResp.TxHash)
 	t.Logf("✅ℹ️Expected Contract Address: %s\n", apiResp.ExpectedContractAddress)
 
-	client, err := serverConfig.DevNodeConfig.GetEthClient()
 	require.NoError(t, err, "❌ Error connecting to dev node")
 	ctx := context.Background()
-
+	client, err := devServerConfig.DevNodeConfig.GetEthClient()
 	var receipt *types.Receipt
 	for i := 0; i < 60; i++ {
 		receipt, err = client.TransactionReceipt(ctx, common.HexToHash(apiResp.TxHash))

@@ -15,8 +15,8 @@ import (
 func SetupRoutes(config config.ServerConfig, contractRegistry *contract.ContractRegistry) *http.ServeMux {
 	mux := http.NewServeMux()
 	servers.SetupPingRoute(config.Name, mux)
-	mux.HandleFunc("/register-contract", registerContract(contractRegistry))
-	mux.Handle("/contract/", http.StripPrefix("/contract", getContract(contractRegistry)))
+	mux.HandleFunc("/api/register-contract", registerContract(contractRegistry))
+	mux.Handle("/api/contract/", http.StripPrefix("/contract", getContract(contractRegistry)))
 	return mux
 }
 
@@ -57,9 +57,11 @@ func registerContract(reg *contract.ContractRegistry) http.HandlerFunc {
 			return
 		}
 
-		httpapi.WriteOK(w, &toytypes.AliasRegisterResponse{
+		res := toytypes.AliasRegisterResponse{
 			Status: "ok",
 			Alias:  meta.Alias,
-		})
+		}
+		logutil.Infof("✅ sending: %v", res)
+		httpapi.WriteOK(w, &res)
 	}
 }
