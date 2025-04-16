@@ -181,6 +181,17 @@ func (d *DefaultDecoder) decodeGenericLog(log types.Log) (logbus.LogEvent, error
 	}, nil
 }
 
+func DecodeGenericLog(log types.Log) logbus.LogEvent {
+	return logbus.LogEvent{
+		LogType:   logbus.UnknownEventLog,
+		Contract:  log.Address.Hex(),
+		TxHash:    log.TxHash.Hex(),
+		Block:     log.BlockNumber,
+		Timestamp: time.Now().Unix(),
+		Args:      make(map[string]interface{}),
+	}
+}
+
 type DecoderRegistry struct {
 	Decoders map[logbus.LogType]Decoder
 }
