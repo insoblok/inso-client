@@ -73,16 +73,17 @@ func (logServer *LogServer) InitService(nodeClient *servers.NodeClient, serverCo
 	go consoleConsumer.Consume()
 
 	broadcaster.Subscribe(eventBus)
-	decoder := &logsub.DefaultDecoder{
-		DecoderFn: logsub.GetDecoderFn(),
+	logDecoder := &LogDecoder{
+		registry: contractRegistry,
 	}
-	go InitLogListener(nodeClient, broadcaster, decoder)
+
+	go InitLogListener(nodeClient, broadcaster, logDecoder)
 
 	handlers := SetupRoutes(serverConfig, contractRegistry)
 	return serverConfig, handlers
 }
 
-func InitLogListener(nodeClient *servers.NodeClient, broadcaster logbus.LogBroadcaster, decoder *logsub.DefaultDecoder) {
+func InitLogListener(nodeClient *servers.NodeClient, broadcaster logbus.LogBroadcaster, decoder logsub.Decoder) {
 	logsCh := make(chan types.Log)
 	query := ethereum.FilterQuery{}
 
