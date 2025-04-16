@@ -22,6 +22,7 @@ type LogDecoder struct {
 }
 
 func (logDecoder *LogDecoder) DecodeLog(logEvent types.Log) (logbus.LogEvent, error) {
+	fmt.Printf("Decodong log: %s\n", logEvent)
 	contractAddr := toytypes.ContractAddress{Address: logEvent.Address.Hex()}
 	evt := logsub.DecodeGenericLog(logEvent)
 	info, ok := logDecoder.registry.Get(contractAddr)
@@ -44,8 +45,9 @@ func (logDecoder *LogDecoder) DecodeLog(logEvent types.Log) (logbus.LogEvent, er
 			} else {
 				fmt.Printf("📢 Event: %s\n", name)
 				fmt.Printf("   Block: %d\n", logEvent.BlockNumber)
+				fmt.Printf("   BlockHash: %v\n", logEvent.BlockHash.Hex())
 				fmt.Printf("   Tx: %s\n", logEvent.TxHash.Hex())
-				fmt.Printf("   Log: %s\n", logEvent.Index)
+				fmt.Printf("   LogIndex: %d\n", logEvent.Index)
 				fmt.Printf("   Contract:%s\n", logEvent.Address.Hex())
 				for k, v := range out {
 					fmt.Printf("   %s: %v\n", k, v)
