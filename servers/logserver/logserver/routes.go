@@ -62,16 +62,11 @@ func registerContract(reg *contract.Registry) http.HandlerFunc {
 			return
 		}
 
-		info := contract.DeployedContractInfo{
-			Address:   toytypes.ContractAddress{Address: meta.Address},
-			Pending:   true,
-			Alias:     meta.Alias,
-			ABI:       meta.ABI,
-			ParsedABI: &parsedABI,
-		}
+		info := meta.ToDeployedContractInfo(true)
+		info.ParsedABI = &parsedABI
 
 		logutil.Infof("📦 Registering alias: %s → %s", meta.Alias, meta.Address)
-		if err := reg.Add(info); err != nil {
+		if err := reg.Add(*info); err != nil {
 			httpapi.WriteError(w, 400, "DuplicateAlias", err.Error())
 			return
 		}

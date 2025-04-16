@@ -37,14 +37,6 @@ func NewLogListener(config *ListenerConfig, broadcaster logbus.LogBroadcaster, d
 	}, nil
 }
 
-func NewLogListenerClient(client *ethclient.Client, broadcaster logbus.LogBroadcaster, decoder Decoder) *LogListener {
-	return &LogListener{
-		Broadcaster: broadcaster,
-		Client:      client,
-		Decoder:     decoder,
-	}
-}
-
 func (l *LogListener) Listen(ctx context.Context) {
 	log.Printf("✅ LogListener started. Listening for logs...")
 

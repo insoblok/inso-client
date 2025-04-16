@@ -146,17 +146,6 @@ func (r *Registry) All() []DeployedContractInfo {
 	return entries
 }
 
-func (r *Registry) All2() *[]DeployedContractInfo {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	entries := make([]DeployedContractInfo, 0, len(r.entries))
-	for _, meta := range r.entries {
-		entries = append(entries, meta)
-	}
-	return &entries
-}
-
 func (r *Registry) Get(contractAddress toytypes.ContractAddress) (DeployedContractInfo, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
