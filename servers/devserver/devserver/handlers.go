@@ -285,7 +285,8 @@ func handleRegisterAlias(reg *contract.Registry) http.HandlerFunc {
 
 		logutil.Infof("📦 Registering alias: %s → %s", meta.Alias, meta.Address)
 
-		if err := reg.Add(meta); err != nil {
+		contractInfo := meta.ToDeployedContractInfo(false)
+		if err := reg.Add(*contractInfo); err != nil {
 			httpapi.WriteError(w, 400, "DuplicateAlias", err.Error())
 			return
 		}
@@ -300,11 +301,11 @@ func handleRegisterAlias(reg *contract.Registry) http.HandlerFunc {
 func handleGetContracts(reg *contract.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		all := reg.All()
-		summaries := []contract.DeployedContractMetaJSON{}
+		summaries := []contract.DeployedContractInfo{}
 
 		for _, entry := range all {
-			entry.ABI = ""      // Strip heavy fields
-			entry.Bytecode = "" // Keep response lightweight
+			entry.ABI = "" // Strip heavy fields
+			entry.ParsedABI = nil
 			summaries = append(summaries, entry)
 		}
 

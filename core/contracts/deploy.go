@@ -6,6 +6,7 @@ import (
 	"eth-toy-client/core/logutil"
 	toytypes "eth-toy-client/core/types"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -103,41 +104,60 @@ type ContractMeta struct {
 	Timestamp time.Time      `json:"timestamp"`
 }
 
+type DeployedContractInfo struct {
+	Pending   bool
+	Alias     string
+	Address   toytypes.ContractAddress
+	TxHash    string
+	ABI       string
+	ParsedABI *abi.ABI
+}
+
 type Registry struct {
 	mu      sync.RWMutex
-	entries map[toytypes.ContractAddress]DeployedContractMetaJSON
+	entries map[toytypes.ContractAddress]DeployedContractInfo
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		entries: make(map[toytypes.ContractAddress]DeployedContractMetaJSON),
+		entries: make(map[toytypes.ContractAddress]DeployedContractInfo),
 	}
 }
 
-func (r *Registry) Add(meta DeployedContractMetaJSON) error {
+func (r *Registry) Add(meta DeployedContractInfo) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	contractAddress := toytypes.ContractAddress{Address: meta.Address}
-	if _, exists := r.entries[contractAddress]; exists {
-		return fmt.Errorf("ContractAddress already exists: %s", contractAddress.Address)
+	if _, exists := r.entries[meta.Address]; exists {
+		return fmt.Errorf("ContractAddress already exists: %s", meta.Address)
 	}
 
-	r.entries[contractAddress] = meta
+	r.entries[meta.Address] = meta
 	return nil
 }
 
-func (r *Registry) All() []DeployedContractMetaJSON {
+func (r *Registry) All() []DeployedContractInfo {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	entries := make([]DeployedContractMetaJSON, 0, len(r.entries))
+	entries := make([]DeployedContractInfo, 0, len(r.entries))
 	for _, meta := range r.entries {
 		entries = append(entries, meta)
 	}
 	return entries
 }
 
-func (r *Registry) Get(contractAddress toytypes.ContractAddress) (DeployedContractMetaJSON, bool) {
+func (r *Registry) All2() *[]DeployedContractInfo {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	entries := make([]DeployedContractInfo, 0, len(r.entries))
+	for _, meta := range r.entries {
+		entries = append(entries, meta)
+	}
+	return &entries
+}
+
+func (r *Registry) Get(contractAddress toytypes.ContractAddress) (DeployedContractInfo, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	meta, ok := r.entries[contractAddress]
@@ -158,4 +178,15 @@ type DeployedContractMetaJSON struct {
 	Bytecode  string `json:"bytecode"`
 	Timestamp int64  `json:"timestamp"`
 	Owner     string `json:"owner"`
+}
+
+func (meta *DeployedContractMetaJSON) ToDeployedContractInfo(pending bool) *DeployedContractInfo {
+	return &DeployedContractInfo{
+		Address:   toytypes.ContractAddress{Address: meta.Address},
+		Alias:     meta.Alias,
+		Pending:   pending,
+		TxHash:    meta.TxHash,
+		ABI:       meta.ABI,
+		ParsedABI: nil,
+	}
 }
