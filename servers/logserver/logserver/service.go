@@ -22,10 +22,15 @@ func (logServer *LogServer) Name() config.ServerName {
 func (logServer *LogServer) InitService(nodeClient *servers.NodeClient, serverConfig config.ServerConfig) (config.ServerConfig, http.Handler) {
 	contractRegistry := contract.NewRegistry()
 	broadcaster := logbus.NewLogBroadcaster()
-	chConsole := make(chan logbus.LogEvent, 10)
-	consoleConsumer := &logsub.PrintToConsole{Name: "ConsoleConsumer", Events: chConsole}
+	eventBus := make(chan logbus.LogEvent, 10)
+
+	consoleConsumer := &ConsoleConsumer{
+		Name:             "ConsoleConsumer",
+		ContractRegistry: contractRegistry,
+		Events:           eventBus}
 	go consoleConsumer.Consume()
-	broadcaster.Subscribe(chConsole)
+
+	broadcaster.Subscribe(eventBus)
 	decoder := &logsub.DefaultDecoder{
 		DecoderFn: logsub.GetDecoderFn(),
 	}
@@ -37,10 +42,7 @@ func (logServer *LogServer) InitService(nodeClient *servers.NodeClient, serverCo
 
 func InitLogListener(nodeClient *servers.NodeClient, broadcaster logbus.LogBroadcaster, decoder *logsub.DefaultDecoder) {
 	logsCh := make(chan types.Log)
-	query := ethereum.FilterQuery{
-		// Add specific contract addresses if needed:
-		// Addresses: []common.Address{common.HexToAddress("0xYourContract")},
-	}
+	query := ethereum.FilterQuery{}
 
 	sub, err := nodeClient.WSClient.SubscribeFilterLogs(context.Background(), query, logsCh)
 	if err != nil {
