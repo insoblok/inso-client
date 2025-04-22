@@ -1,5 +1,5 @@
 # inso-client
-A minimal Ethereum client in Go for learning and experimenting with core blockchain concepts.
+A minimal Ethereum client in Go demonstrating core blockchain concepts.
 
 ---
 
