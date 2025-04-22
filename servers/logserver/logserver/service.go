@@ -10,6 +10,7 @@ import (
 	"eth-toy-client/servers/servers"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/core/types"
 	"log"
 	"net/http"
@@ -35,6 +36,8 @@ func (logDecoder *LogDecoder) DecodeLog(logEvent types.Log) (logbus.LogEvent, er
 		return evt, nil
 	}
 
+	fmt.Printf("TopicsLen: %v\n", len(logEvent.Topics))
+
 	for name, event := range info.ParsedABI.Events {
 		if logEvent.Topics[0] == event.ID {
 			out := map[string]interface{}{}
@@ -49,6 +52,35 @@ func (logDecoder *LogDecoder) DecodeLog(logEvent types.Log) (logbus.LogEvent, er
 				fmt.Printf("   Tx: %s\n", logEvent.TxHash.Hex())
 				fmt.Printf("   LogIndex: %d\n", logEvent.Index)
 				fmt.Printf("   Contract:%s\n", logEvent.Address.Hex())
+
+				fmt.Printf("🔍 Event Structure Details for '%s':\n", name)
+				eventDetails := event.Inputs
+
+				indexedArgs := make([]abi.Argument, 0)
+				noneIndexedArgs := make([]abi.Argument, 0)
+
+				for i, input := range eventDetails {
+					fmt.Printf("%d   Name: %s, Type: %s, Indexed: %v\n", i, input.Name, input.Type.String(), input.Indexed)
+					if input.Indexed {
+						indexedArgs = append(indexedArgs, input)
+					} else {
+						noneIndexedArgs = append(noneIndexedArgs, input)
+					}
+				}
+
+				if len(noneIndexedArgs) != len(out) {
+					log.Printf("⚠️ Mismatch between noneIndexedArgs length (%d) and out length (%d)", len(noneIndexedArgs), len(out))
+				}
+
+				if len(indexedArgs) != (len(logEvent.Topics) - 1) {
+					log.Printf("⚠️ Mismatch between IdexedArgs length (%d) and topics (%d)", len(indexedArgs), len(logEvent.Topics))
+				}
+
+				indexedValues := logEvent.Topics[1:]
+				for i, input := range indexedArgs {
+					fmt.Printf("  %s : %s\n", input.Name, indexedValues[i].Hex())
+				}
+
 				for k, v := range out {
 					fmt.Printf("   %s: %v\n", k, v)
 				}
