@@ -5,7 +5,7 @@ A minimal Ethereum client in Go for learning and experimenting with core blockch
 
 ## 🚀 Overview
 
-The **Ethereum Toy Client** is a minimal implementation of an Ethereum client, designed to:
+The **Ethereum Inso Client** is a minimal implementation of an Ethereum client, designed to:
 
 - Serve as a learning tool for Ethereum’s architecture and core concepts
 - Provide a simple testing environment for Ethereum-based applications
@@ -38,8 +38,8 @@ The **Ethereum Toy Client** is a minimal implementation of an Ethereum client, d
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/eth-toy-client.git
-   cd eth-toy-client
+   git clone https://github.com/insoblok/inso-client
+   cd inso-client
    ```
 
 2. **Install dependencies**
@@ -99,7 +99,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 - Submit issues or bugs via GitHub Issues
 - Join our [Discord community](https://discord.gg/yourinvite)
-- Explore our [Wiki](https://github.com/yourusername/eth-toy-client/wiki)
+- Explore our [Wiki](https://github.com/yourusername/inso-client/wiki)
 
 ---
 
